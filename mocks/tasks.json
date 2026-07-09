@@ -1,0 +1,82 @@
+[
+  {
+    "id": "T-441",
+    "title": "Approve Q3 media plan before agency locks placements",
+    "project": "Growth",
+    "status": "in_progress",
+    "priority": "urgent",
+    "assignee": "Mark",
+    "due_date": "2026-07-09",
+    "notes": "Priya waiting on sign-off — decision blocks $165k spend."
+  },
+  {
+    "id": "T-438",
+    "title": "Decision: Nashville overflow bay vs Dallas routing",
+    "project": "Operations",
+    "status": "blocked",
+    "priority": "high",
+    "assignee": "Mark",
+    "due_date": "2026-07-11",
+    "notes": "Jamie has cost breakdowns ready. Choose before BFCM planning locks."
+  },
+  {
+    "id": "T-445",
+    "title": "Board deck — July update (draft + review)",
+    "project": "Executive",
+    "status": "in_progress",
+    "priority": "high",
+    "assignee": "Mark",
+    "due_date": "2026-07-10",
+    "notes": "Draft due EOD today for CFO review tomorrow."
+  },
+  {
+    "id": "T-432",
+    "title": "VP Marketing hire — decide on Sofia",
+    "project": "People",
+    "status": "in_progress",
+    "priority": "high",
+    "assignee": "Mark",
+    "due_date": "2026-07-11",
+    "notes": "Panel done. Chen wants a call to sync before offer."
+  },
+  {
+    "id": "T-427",
+    "title": "Review SKU expansion contract redlines",
+    "project": "Legal",
+    "status": "in_progress",
+    "priority": "medium",
+    "assignee": "Mark",
+    "due_date": "2026-07-12",
+    "notes": "Marcus flagged two open clauses."
+  },
+  {
+    "id": "T-419",
+    "title": "Draft response to Reddit sentiment thread",
+    "project": "Brand",
+    "status": "in_progress",
+    "priority": "medium",
+    "assignee": "Mark",
+    "due_date": "2026-07-14",
+    "notes": ""
+  },
+  {
+    "id": "T-401",
+    "title": "Refresh personal OKRs for Q3",
+    "project": "Executive",
+    "status": "in_progress",
+    "priority": "low",
+    "assignee": "Mark",
+    "due_date": null,
+    "notes": ""
+  },
+  {
+    "id": "T-398",
+    "title": "Plan founder off-site (September)",
+    "project": "Executive",
+    "status": "in_progress",
+    "priority": "low",
+    "assignee": "Mark",
+    "due_date": null,
+    "notes": ""
+  }
+]

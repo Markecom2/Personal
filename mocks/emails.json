@@ -1,0 +1,74 @@
+[
+  {
+    "uid": "1001",
+    "subject": "Re: Q3 media budget — need your sign-off today",
+    "sender_name": "Priya Sharma",
+    "sender_email": "priya@ecommerceally.com",
+    "received_at": "2026-07-09T07:12:00",
+    "snippet": "Mark — pushed the revised media plan. Meta is at $85k, Google at $60k, TikTok test at $20k. Need your yes/no before we lock the placements with the agency at 3pm.",
+    "flagged": true
+  },
+  {
+    "uid": "1002",
+    "subject": "URGENT: Payment processor freeze on order #48291",
+    "sender_name": "Stripe Support",
+    "sender_email": "support@stripe.com",
+    "received_at": "2026-07-09T06:45:00",
+    "snippet": "We flagged an unusual charge pattern on your account. Order #48291 ($12,400) is being held. Please reply with confirmation the transaction is legitimate.",
+    "flagged": false
+  },
+  {
+    "uid": "1003",
+    "subject": "Interview follow-up — VP Marketing candidate",
+    "sender_name": "Chen Wei",
+    "sender_email": "chen@ecommerceally.com",
+    "received_at": "2026-07-09T05:30:00",
+    "snippet": "Just wrapped the panel with Sofia. Team is split — 3 strong yes, 1 no. She wants to know by Friday. Do you want to do a final round with her?",
+    "flagged": false
+  },
+  {
+    "uid": "1004",
+    "subject": "Your weekly Shopify performance report",
+    "sender_name": "Shopify",
+    "sender_email": "noreply@shopify.com",
+    "received_at": "2026-07-09T04:00:00",
+    "snippet": "Sessions +8%, conversion 2.3%, AOV $87.40. Full report attached.",
+    "flagged": false
+  },
+  {
+    "uid": "1005",
+    "subject": "Contract redlines — SKU expansion agreement",
+    "sender_name": "Marcus Reilly",
+    "sender_email": "marcus@reillylegal.com",
+    "received_at": "2026-07-08T21:15:00",
+    "snippet": "Attached the marked-up draft. Two open items: indemnity cap and termination for convenience. Can we align before you sign?",
+    "flagged": true
+  },
+  {
+    "uid": "1006",
+    "subject": "🔥 Last chance: 40% off DTC Growth Summit tickets",
+    "sender_name": "DTC Growth Summit",
+    "sender_email": "team@dtcsummit.io",
+    "received_at": "2026-07-08T20:00:00",
+    "snippet": "The early-bird window closes at midnight. Grab your seat before the price jumps.",
+    "flagged": false
+  },
+  {
+    "uid": "1007",
+    "subject": "Warehouse capacity update — Nashville",
+    "sender_name": "Jamie Kwon",
+    "sender_email": "jamie@ecommerceally.com",
+    "received_at": "2026-07-08T18:30:00",
+    "snippet": "Nashville is at 92% pallet capacity. If BFCM volumes track our forecast we'll spill by mid-October. Options: rent overflow bay, or route Southeast orders through Dallas. Need direction this week.",
+    "flagged": false
+  },
+  {
+    "uid": "1008",
+    "subject": "Speaking invite — Retail Innovation Podcast",
+    "sender_name": "Jordan Ellis",
+    "sender_email": "jordan@retailinnov.pod",
+    "received_at": "2026-07-08T16:00:00",
+    "snippet": "We'd love to have you on to talk about your DTC playbook. 45 min recording, any weekday afternoon in August.",
+    "flagged": false
+  }
+]

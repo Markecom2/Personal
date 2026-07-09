@@ -1,0 +1,259 @@
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #faf8f4;
+    --fg: #1a1a1a;
+    --muted: #6b6b6b;
+    --card: #ffffff;
+    --border: #e5e2dc;
+    --accent: #b8482d;
+    --accent-soft: #f4e8e2;
+    --now: #2d7d5a;
+    --now-soft: #e1f0ea;
+    --danger: #b8482d;
+    --danger-soft: #f4e8e2;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.05);
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Text", Helvetica, Arial, sans-serif;
+    --serif: Georgia, "Times New Roman", serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17171a;
+      --fg: #ececec;
+      --muted: #9a9a9a;
+      --card: #212125;
+      --border: #303035;
+      --accent: #e0765b;
+      --accent-soft: #3a2620;
+      --now: #4fc394;
+      --now-soft: #1e3128;
+      --danger: #e0765b;
+      --danger-soft: #3a2620;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #faf8f4; --fg: #1a1a1a; --muted: #6b6b6b; --card: #ffffff;
+    --border: #e5e2dc; --accent: #b8482d; --accent-soft: #f4e8e2;
+    --now: #2d7d5a; --now-soft: #e1f0ea; --danger: #b8482d; --danger-soft: #f4e8e2;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.05);
+  }
+  :root[data-theme="dark"] {
+    --bg: #17171a; --fg: #ececec; --muted: #9a9a9a; --card: #212125;
+    --border: #303035; --accent: #e0765b; --accent-soft: #3a2620;
+    --now: #4fc394; --now-soft: #1e3128; --danger: #e0765b; --danger-soft: #3a2620;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.4);
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.5;
+    padding: 32px 24px 80px;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+
+  header { margin-bottom: 32px; }
+  .kicker { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h1 { font-family: var(--serif); font-size: 32px; font-weight: 400; margin: 4px 0 0; letter-spacing: -0.01em; }
+  .headline { font-size: 17px; margin-top: 10px; color: var(--fg); max-width: 720px; }
+
+  .focus {
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin: 24px 0 32px;
+  }
+  .focus h2 { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 8px; color: var(--accent); font-weight: 700; }
+  .focus ul { margin: 0; padding-left: 20px; }
+  .focus li { margin: 4px 0; }
+
+  section { margin-bottom: 32px; }
+  section > h2 {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 400;
+    margin: 0 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  section > h2 .count { font-family: var(--font); font-size: 12px; color: var(--muted); font-weight: 500; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    box-shadow: var(--shadow);
+  }
+  .card.priority-top { border-left: 3px solid var(--danger); }
+  .card.priority-now { border-left: 3px solid var(--danger); background: var(--danger-soft); }
+  .row { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .title { font-weight: 600; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .snippet { color: var(--muted); font-size: 13px; margin-top: 4px; line-height: 1.45; }
+
+  .tag {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    background: var(--border);
+    color: var(--fg);
+  }
+  .tag-now { background: var(--danger); color: #fff; }
+  .tag-today { background: var(--accent); color: #fff; }
+  .tag-fyi { background: var(--border); color: var(--muted); }
+  .tag-focus { background: var(--danger); color: #fff; }
+  .tag-imp { background: var(--accent); color: #fff; }
+  .tag-later { background: var(--border); color: var(--muted); }
+
+  .event-time { font-family: var(--serif); font-size: 16px; min-width: 110px; color: var(--accent); }
+  .event-body { flex: 1; }
+  .event-location { color: var(--muted); font-size: 13px; }
+  .event-now { background: var(--now-soft); border-left-color: var(--now); }
+
+  .empty { color: var(--muted); font-style: italic; padding: 12px 0; }
+
+  footer { color: var(--muted); font-size: 12px; margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .why { color: var(--muted); font-size: 12px; margin-top: 2px; font-style: italic; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="kicker">{{ mode_label }} briefing · {{ date_str }}</div>
+    <h1>Good {{ greeting }}, {{ user_name }}.</h1>
+    <p class="headline">{{ headline }}</p>
+  </header>
+
+  <div class="focus">
+    <h2>Focus</h2>
+    <ul>
+    {% for point in focus_points %}
+      <li>{{ point }}</li>
+    {% endfor %}
+    </ul>
+  </div>
+
+  <section>
+    <h2>{{ calendar_label }} <span class="count">{{ events|length }}</span></h2>
+    {% if not events %}
+      <div class="empty">Nothing on the calendar.</div>
+    {% else %}
+      {% for ev in events %}
+        <div class="card{% if ev.is_now %} event-now{% endif %}">
+          <div class="row">
+            <div class="event-time">
+              {% if ev.all_day %}all day{% else %}{{ ev.start_str }}<br><span style="font-size:12px;color:var(--muted);">→ {{ ev.end_str }}</span>{% endif %}
+            </div>
+            <div class="event-body">
+              <div class="title">{{ ev.summary }}</div>
+              {% if ev.location %}<div class="event-location">{{ ev.location }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Priority tasks <span class="count">{{ tasks_top|length }} focus · {{ tasks_important|length }} important · {{ tasks_later|length }} later</span></h2>
+    {% if not tasks_top and not tasks_important %}
+      <div class="empty">Nothing urgent from the PM tool.</div>
+    {% endif %}
+    {% for t in tasks_top %}
+      <div class="card priority-top">
+        <div class="row">
+          <span class="tag tag-focus">Focus</span>
+          <span class="title">{{ t.title }}</span>
+          {% if t.project %}<span class="meta">· {{ t.project }}</span>{% endif %}
+          {% if t.due_date %}<span class="meta">· due {{ t.due_date }}</span>{% endif %}
+        </div>
+        {% if t.why %}<div class="why">{{ t.why }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    {% for t in tasks_important %}
+      <div class="card">
+        <div class="row">
+          <span class="tag tag-imp">Important</span>
+          <span class="title">{{ t.title }}</span>
+          {% if t.project %}<span class="meta">· {{ t.project }}</span>{% endif %}
+          {% if t.due_date %}<span class="meta">· due {{ t.due_date }}</span>{% endif %}
+        </div>
+        {% if t.why %}<div class="why">{{ t.why }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    {% if tasks_later %}
+      <details style="margin-top:12px;">
+        <summary style="cursor:pointer;color:var(--muted);font-size:13px;">{{ tasks_later|length }} later ↓</summary>
+        {% for t in tasks_later %}
+          <div class="card">
+            <div class="row">
+              <span class="tag tag-later">Later</span>
+              <span class="title">{{ t.title }}</span>
+              {% if t.project %}<span class="meta">· {{ t.project }}</span>{% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </details>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Emails to handle <span class="count">{{ emails_now|length }} now · {{ emails_today|length }} today · {{ emails_fyi|length }} fyi</span></h2>
+    {% if not emails_now and not emails_today %}
+      <div class="empty">Inbox is clear.</div>
+    {% endif %}
+    {% for m in emails_now %}
+      <div class="card priority-now">
+        <div class="row">
+          <span class="tag tag-now">Respond now</span>
+          <span class="title">{{ m.subject }}</span>
+        </div>
+        <div class="meta">{{ m.sender_name }} · {{ m.received_str }}</div>
+        {% if m.snippet %}<div class="snippet">{{ m.snippet }}</div>{% endif %}
+        {% if m.why %}<div class="why">{{ m.why }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    {% for m in emails_today %}
+      <div class="card">
+        <div class="row">
+          <span class="tag tag-today">Today</span>
+          <span class="title">{{ m.subject }}</span>
+        </div>
+        <div class="meta">{{ m.sender_name }} · {{ m.received_str }}</div>
+        {% if m.snippet %}<div class="snippet">{{ m.snippet }}</div>{% endif %}
+        {% if m.why %}<div class="why">{{ m.why }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    {% if emails_fyi %}
+      <details style="margin-top:12px;">
+        <summary style="cursor:pointer;color:var(--muted);font-size:13px;">{{ emails_fyi|length }} FYI ↓</summary>
+        {% for m in emails_fyi %}
+          <div class="card">
+            <div class="row">
+              <span class="tag tag-fyi">FYI</span>
+              <span class="title">{{ m.subject }}</span>
+            </div>
+            <div class="meta">{{ m.sender_name }} · {{ m.received_str }}</div>
+          </div>
+        {% endfor %}
+      </details>
+    {% endif %}
+  </section>
+
+  <footer>
+    Generated {{ generated_at }} · {{ source_label }}
+  </footer>
+</div>
