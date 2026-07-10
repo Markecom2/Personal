@@ -39,8 +39,6 @@ SCHEMA = {
         "focus_points": {
             "type": "array",
             "items": {"type": "string"},
-            "minItems": 1,
-            "maxItems": 6,
         },
         "email_priorities": {
             "type": "array",
