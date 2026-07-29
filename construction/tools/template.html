@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Construction Expense Dashboard</title>
+<style>
+:root {
+  color-scheme: light;
+  --plane:        #f9f9f7;
+  --surface:      #fcfcfb;
+  --surface-2:    #ffffff;
+  --sunken:       #f0efec;
+  --border:       rgba(11,11,11,0.10);
+  --hairline:     #e1e0d9;
+  --baseline:     #c3c2b7;
+  --ink:          #0b0b0b;
+  --ink-2:        #52514e;
+  --muted:        #898781;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300;
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --seq-100:#cde2fb; --seq-250:#86b6ef; --seq-450:#2a78d6; --seq-600:#184f95;
+  --shadow: 0 1px 2px rgba(11,11,11,.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --plane:#0d0d0d; --surface:#1a1a19; --surface-2:#232322; --sunken:#232322;
+    --border: rgba(255,255,255,0.10); --hairline:#2c2c2a; --baseline:#383835;
+    --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300;
+    --seq-100:#0d366b; --seq-250:#184f95; --seq-450:#3987e5; --seq-600:#86b6ef;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane:#0d0d0d; --surface:#1a1a19; --surface-2:#232322; --sunken:#232322;
+  --border: rgba(255,255,255,0.10); --hairline:#2c2c2a; --baseline:#383835;
+  --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300;
+  --seq-100:#0d366b; --seq-250:#184f95; --seq-450:#3987e5; --seq-600:#86b6ef;
+  --shadow: none;
+}
+
+* { box-sizing: border-box; }
+html, body { max-width: 100%; overflow-x: hidden; }
+body {
+  margin:0; background: var(--plane); color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased;
+}
+h1,h2,h3 { margin:0; font-weight:650; letter-spacing:-.01em; }
+button, select, input { font-family: inherit; font-size: 13px; color: var(--ink); }
+
+/* ---------- chrome ---------- */
+header {
+  background: var(--surface); border-bottom: 1px solid var(--hairline);
+  padding: 14px 20px; position: sticky; top:0; z-index: 40;
+}
+.hrow { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
+.hrow h1 { font-size: 17px; }
+.sub { color: var(--ink-2); font-size: 12px; margin-top:2px; }
+.spacer { flex:1 1 auto; }
+.actions { display:flex; gap:6px; flex-wrap:wrap; }
+
+button {
+  padding: 6px 11px; border-radius: 7px; border:1px solid var(--border);
+  background: var(--surface-2); cursor:pointer; font-weight:550; box-shadow: var(--shadow);
+}
+button:hover { background: var(--sunken); }
+button.primary { background: var(--s1); border-color: var(--s1); color:#fff; }
+button.primary:hover { filter: brightness(.93); }
+button.danger:hover { color: var(--critical); border-color: var(--critical); }
+button.icon { padding: 6px 9px; }
+button:disabled { opacity:.4; cursor:not-allowed; }
+
+nav.tabs { display:flex; gap:2px; margin-top:12px; flex-wrap:wrap; }
+nav.tabs button {
+  background:transparent; border:none; box-shadow:none; border-radius:0;
+  padding: 7px 12px; color: var(--ink-2); border-bottom: 2px solid transparent;
+}
+nav.tabs button:hover { color: var(--ink); background: transparent; }
+nav.tabs button.on { color: var(--s1); border-bottom-color: var(--s1); font-weight:650; }
+.tab-badge {
+  display:inline-block; margin-left:5px; background: var(--sunken); color: var(--ink-2);
+  border-radius:999px; padding:0 6px; font-size:11px; font-weight:650;
+}
+nav.tabs button.on .tab-badge { background: var(--s1); color:#fff; }
+
+main { max-width: 1440px; margin: 0 auto; padding: 20px; }
+.view { display:none; }
+.view.on { display:block; }
+
+section {
+  background: var(--surface); border:1px solid var(--hairline); border-radius: 12px;
+  padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow);
+}
+section > h2 { font-size: 14px; }
+section > .desc { color: var(--ink-2); font-size:12px; margin: 3px 0 16px; }
+
+/* ---------- stat tiles ---------- */
+.tiles { display:grid; grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); gap:12px; margin-bottom:16px; }
+.tile {
+  background: var(--surface); border:1px solid var(--hairline); border-radius:12px;
+  padding: 14px 16px; box-shadow: var(--shadow);
+}
+.tile .k { font-size:11px; font-weight:650; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+.tile .v { font-size:25px; font-weight:700; margin-top:5px; letter-spacing:-.02em; }
+.tile .n { font-size:11.5px; color: var(--ink-2); margin-top:3px; }
+.tile.hero { border-color: var(--s1); }
+.tile.hero .v { color: var(--s1); }
+
+/* ---------- bar chart ---------- */
+.chart { display:flex; flex-direction:column; gap:1px; }
+.row {
+  display:grid; grid-template-columns: 210px 1fr 108px; gap:12px; align-items:center;
+  padding: 4px 6px; border-radius:6px; cursor:pointer;
+}
+.row:hover { background: var(--sunken); }
+.row.sub { grid-template-columns: 210px 1fr 108px; cursor:default; }
+.row.sub .lbl { padding-left:16px; color: var(--ink-2); font-size:12.5px; }
+.row.sub:hover { background: transparent; }
+.lbl { font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:flex; align-items:center; gap:6px; }
+.caret { color: var(--muted); font-size:10px; width:9px; flex:none; transition: transform .12s; }
+.row.open .caret { transform: rotate(90deg); }
+.track { background: var(--sunken); border-radius:4px; height:16px; position:relative; }
+.fill { height:100%; border-radius:4px; background: var(--seq-450); }
+.row.sub .fill { background: var(--seq-250); height:11px; }
+.row.sub .track { height:11px; }
+.val { text-align:right; font-variant-numeric: tabular-nums; font-weight:600; font-size:12.5px; }
+.val .pct { display:block; font-size:10.5px; color:var(--muted); font-weight:500; }
+
+/* ---------- stacked monthly ---------- */
+.months { display:flex; gap:18px; align-items:flex-end; height:230px; padding: 0 4px; overflow-x:auto; }
+.mcol { flex:1 1 0; min-width:78px; display:flex; flex-direction:column; height:100%; }
+.mstack { flex:1; display:flex; flex-direction:column; justify-content:flex-end; gap:2px; }
+.seg { border-radius:2px; min-height:2px; }
+.mstack .seg:first-child { border-radius:4px 4px 2px 2px; }
+.mfoot { text-align:center; padding-top:8px; border-top:1px solid var(--baseline); margin-top:6px; }
+.mfoot .m { font-size:12px; font-weight:600; }
+.mfoot .t { font-size:11.5px; color:var(--ink-2); font-variant-numeric:tabular-nums; }
+.legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:16px; font-size:12px; color:var(--ink-2); }
+.legend span { display:inline-flex; align-items:center; gap:6px; }
+.swatch { width:10px; height:10px; border-radius:3px; flex:none; }
+
+/* ---------- tooltip ---------- */
+#tip {
+  position:fixed; z-index:100; pointer-events:none; opacity:0; transition:opacity .1s;
+  background: var(--surface-2); border:1px solid var(--hairline); border-radius:8px;
+  padding:8px 10px; font-size:12px; box-shadow: 0 4px 14px rgba(0,0,0,.14); max-width:260px;
+}
+#tip.on { opacity:1; }
+#tip .tt { font-weight:650; margin-bottom:2px; }
+#tip .tv { font-variant-numeric: tabular-nums; }
+#tip .tm { color: var(--muted); font-size:11px; }
+
+/* ---------- filters ---------- */
+.filters { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+.filters input[type=text], .filters select {
+  padding:6px 9px; border-radius:7px; border:1px solid var(--border); background: var(--surface-2);
+}
+.filters input[type=text] { min-width: 200px; }
+.filters label.chk { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-2); cursor:pointer; }
+.count { font-size:12px; color:var(--muted); margin-left:auto; font-variant-numeric:tabular-nums; }
+
+/* ---------- table ---------- */
+.tblwrap { overflow-x:auto; border:1px solid var(--hairline); border-radius:10px; }
+table { width:100%; border-collapse:collapse; font-size:12.5px; }
+thead th {
+  text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; font-weight:650;
+  color:var(--muted); background: var(--surface); padding:9px 10px;
+  border-bottom:1px solid var(--hairline); position:sticky; top:0; z-index:2; white-space:nowrap;
+}
+tbody td { padding:6px 10px; border-bottom:1px solid var(--hairline); vertical-align:middle; }
+tbody tr:last-child td { border-bottom:none; }
+tbody tr:hover { background: var(--sunken); }
+tbody tr.sel { background: color-mix(in srgb, var(--s1) 9%, transparent); }
+td.amt { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; font-weight:600; }
+td.amt.cr { color: var(--good); }
+td.dt { white-space:nowrap; color:var(--ink-2); font-variant-numeric:tabular-nums; }
+td.vn { font-weight:600; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+td.rawc { max-width:230px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:11.5px; }
+select.cs { padding:4px 5px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); max-width:190px; width:100%; font-size:12px; }
+input.note { padding:4px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); width:100%; min-width:110px; font-size:12px; }
+
+.pill { display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:650; padding:2px 7px; border-radius:999px; white-space:nowrap; }
+.pill.confirmed { background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good); }
+.pill.inferred  { background: color-mix(in srgb, var(--warning) 20%, transparent); color: #8a5c00; }
+.pill.review    { background: color-mix(in srgb, var(--serious) 20%, transparent); color: #a4491d; }
+:root[data-theme="dark"] .pill.inferred, :root[data-theme="dark"] .pill.review { color: var(--ink); }
+@media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) .pill.inferred,
+  :root:where(:not([data-theme="light"])) .pill.review { color: var(--ink); } }
+.pill.excl { background: var(--sunken); color: var(--muted); }
+
+/* ---------- bulk bar ---------- */
+.bulk {
+  display:none; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 12px; margin-bottom:12px;
+  background: color-mix(in srgb, var(--s1) 8%, var(--surface)); border:1px solid var(--s1); border-radius:9px;
+}
+.bulk.on { display:flex; }
+.bulk .n { font-weight:650; font-size:12.5px; }
+
+/* ---------- taxonomy editor ---------- */
+.catgrid { display:grid; grid-template-columns: repeat(auto-fill, minmax(290px,1fr)); gap:12px; }
+.catcard { border:1px solid var(--hairline); border-radius:10px; padding:12px 14px; background: var(--surface-2); }
+.catcard.excl { opacity:.72; }
+.catcard h3 { font-size:13px; display:flex; align-items:center; gap:7px; }
+.catcard .meta { font-size:11px; color:var(--muted); margin:2px 0 9px; font-variant-numeric:tabular-nums; }
+.subs { display:flex; flex-direction:column; gap:3px; }
+.subrow { display:flex; align-items:center; gap:6px; font-size:12.5px; padding:2px 0; }
+.subrow .sname { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.subrow .scount { color:var(--muted); font-size:11px; font-variant-numeric:tabular-nums; }
+.subrow button, .catcard h3 button { padding:1px 6px; font-size:11px; box-shadow:none; }
+.addrow { display:flex; gap:5px; margin-top:9px; }
+.addrow input { flex:1; padding:4px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface); font-size:12px; min-width:0; }
+.tag { font-size:10px; font-weight:650; padding:1px 6px; border-radius:4px; background:var(--sunken); color:var(--muted); text-transform:uppercase; letter-spacing:.03em; }
+
+.empty { padding:30px; text-align:center; color:var(--muted); font-size:13px; }
+.note-tip { font-size:11.5px; color:var(--muted); margin-top:10px; }
+@media (max-width: 720px) {
+  .row, .row.sub { grid-template-columns: 130px 1fr 86px; gap:8px; }
+  main { padding: 14px; }
+}
+</style>
+</head>
+<body>
+
+<div id="tip"></div>
+
+<header>
+  <div class="hrow">
+    <div>
+      <h1>Construction Expense Dashboard</h1>
+      <div class="sub" id="metaLine"></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="actions">
+      <button id="btnTheme" class="icon" title="Toggle light / dark">◐</button>
+      <button id="btnCsv">Export CSV</button>
+      <button id="btnJson">Save backup</button>
+      <button id="btnImport">Restore</button>
+      <button id="btnReset" class="danger">Reset</button>
+      <input type="file" id="fileIn" accept=".json" style="display:none">
+    </div>
+  </div>
+  <nav class="tabs">
+    <button data-view="overview" class="on">Overview</button>
+    <button data-view="txns">Transactions</button>
+    <button data-view="vendors">Vendors <span class="tab-badge" id="badgeVendors"></span></button>
+    <button data-view="review">Review queue <span class="tab-badge" id="badgeReview"></span></button>
+    <button data-view="cats">Categories</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ============ OVERVIEW ============ -->
+<div class="view on" id="view-overview">
+  <div class="tiles" id="tiles"></div>
+
+  <section>
+    <h2>Spend by category</h2>
+    <div class="desc">Construction categories only, ranked. Click a bar to open its sub-categories.</div>
+    <div class="chart" id="catChart"></div>
+  </section>
+
+  <section>
+    <h2>Monthly construction spend</h2>
+    <div class="desc">Stacked by the five largest categories; everything else grouped as Other.</div>
+    <div class="months" id="monthChart"></div>
+    <div class="legend" id="monthLegend"></div>
+  </section>
+
+  <section>
+    <h2>Top vendors</h2>
+    <div class="desc">Largest construction payees across the statement period.</div>
+    <div class="chart" id="vendorChart"></div>
+  </section>
+</div>
+
+<!-- ============ TRANSACTIONS ============ -->
+<div class="view" id="view-txns">
+  <section>
+    <h2>All transactions</h2>
+    <div class="desc">Change a category and the sub-category list follows it. Tick rows to re-assign several at once.</div>
+
+    <div class="filters">
+      <input type="text" id="q" placeholder="Search vendor or description…">
+      <select id="fCat"></select>
+      <select id="fSub"></select>
+      <select id="fConf">
+        <option value="">Any confidence</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="inferred">Inferred</option>
+        <option value="review">Needs review</option>
+      </select>
+      <select id="fMonth"></select>
+      <label class="chk"><input type="checkbox" id="fConstr" checked> Construction only</label>
+      <label class="chk"><input type="checkbox" id="fDebit" checked> Payments only</label>
+      <span class="count" id="cnt"></span>
+    </div>
+
+    <div class="bulk" id="bulk">
+      <span class="n" id="bulkN"></span>
+      <select id="bulkCat"></select>
+      <select id="bulkSub"></select>
+      <button class="primary" id="bulkApply">Apply</button>
+      <button id="bulkClear">Clear selection</button>
+    </div>
+
+    <div class="tblwrap">
+      <table>
+        <thead><tr>
+          <th style="width:28px"><input type="checkbox" id="selAll"></th>
+          <th>Date</th><th>Vendor</th><th>Bank description</th><th style="text-align:right">Amount</th>
+          <th>Category</th><th>Sub-category</th><th>Status</th><th>Note</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="note-tip">Edits save to this browser automatically. Use <b>Save backup</b> before switching machines.</div>
+  </section>
+</div>
+
+<!-- ============ VENDORS ============ -->
+<div class="view" id="view-vendors">
+  <section>
+    <h2>Vendor roll-up</h2>
+    <div class="desc">Assigning a vendor here re-categorises every one of its transactions at once — the fastest way to clear the backlog.</div>
+    <div class="filters">
+      <input type="text" id="vq" placeholder="Search vendor…">
+      <label class="chk"><input type="checkbox" id="vConstr" checked> Construction only</label>
+      <span class="count" id="vcnt"></span>
+    </div>
+    <div class="tblwrap">
+      <table>
+        <thead><tr>
+          <th>Vendor</th><th style="text-align:right">Txns</th><th style="text-align:right">Total paid</th>
+          <th>First → last</th><th>Category</th><th>Sub-category</th><th>Status</th>
+        </tr></thead>
+        <tbody id="vbody"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- ============ REVIEW ============ -->
+<div class="view" id="view-review">
+  <section>
+    <h2>Review queue</h2>
+    <div class="desc">Vendors the bank narration could not identify, largest first. Pick the trade and every payment to that vendor is filed.</div>
+    <div class="tblwrap">
+      <table>
+        <thead><tr>
+          <th>Vendor</th><th style="text-align:right">Txns</th><th style="text-align:right">Total paid</th>
+          <th>Currently filed as</th><th>Set category</th><th>Set sub-category</th><th></th>
+        </tr></thead>
+        <tbody id="rbody"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- ============ CATEGORIES ============ -->
+<div class="view" id="view-cats">
+  <section>
+    <h2>Category structure</h2>
+    <div class="desc">Add, rename or remove categories and sub-categories. Everything on the other tabs updates immediately.</div>
+    <div class="filters">
+      <input type="text" id="newCat" placeholder="New category name…" style="min-width:220px">
+      <select id="newCatKind">
+        <option value="construction">Construction cost</option>
+        <option value="excluded">Not construction (excluded)</option>
+      </select>
+      <button class="primary" id="addCat">Add category</button>
+    </div>
+    <div class="catgrid" id="catgrid"></div>
+  </section>
+</div>
+
+</main>
+
+<script>
+"use strict";
+const SEED = /*__SEED__*/;
+
+/* ------------------------------------------------------------ state */
+const KEY = 'constructionDash.v1';
+let S = null;
+
+function freshState() {
+  return {
+    taxonomy: structuredClone(SEED.taxonomy),
+    excluded: [...SEED.excludedCats],
+    txns: structuredClone(SEED.txns),
+    theme: null,
+  };
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (p && p.txns && p.taxonomy) return p;
+    }
+  } catch (e) { /* fall through to a clean state */ }
+  return freshState();
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch (e) { /* private mode / quota — edits still live in memory */ }
+}
+
+S = load();
+
+/* ------------------------------------------------------------ helpers */
+const $ = id => document.getElementById(id);
+const isExcl = c => S.excluded.includes(c);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+const inr = n => '₹' + Math.round(Math.abs(n)).toLocaleString('en-IN');
+function short(n) {
+  const a = Math.abs(n);
+  if (a >= 1e7) return '₹' + (a/1e7).toFixed(2) + ' Cr';
+  if (a >= 1e5) return '₹' + (a/1e5).toFixed(2) + ' L';
+  if (a >= 1e3) return '₹' + Math.round(a/1e3) + 'k';
+  return '₹' + Math.round(a);
+}
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const dmy = d => { const [y,m,dd] = d.split('-'); return `${dd} ${MON[+m-1]}`; };
+const ym  = d => d.slice(0,7);
+const ymLabel = k => { const [y,m] = k.split('-'); return `${MON[+m-1]} ${y}`; };
+
+/** Spend as a positive number; credits count as zero spend. */
+const spendOf = t => t.amount < 0 ? -t.amount : 0;
+const constructionTxns = () => S.txns.filter(t => !isExcl(t.cat));
+
+/** Inclusive day count between the first and last transaction. */
+function spanDays(txns) {
+  if (!txns.length) return 1;
+  const ds = txns.map(t => Date.parse(t.date));
+  return Math.max(1, Math.round((Math.max(...ds) - Math.min(...ds)) / 864e5) + 1);
+}
+
+/* ------------------------------------------------------------ tooltip */
+const tip = $('tip');
+function bindTip(el, html) {
+  el.addEventListener('mouseenter', () => { tip.innerHTML = html; tip.classList.add('on'); });
+  el.addEventListener('mousemove', e => {
+    const pad = 14;
+    let x = e.clientX + pad, y = e.clientY + pad;
+    const r = tip.getBoundingClientRect();
+    if (x + r.width > innerWidth - 8) x = e.clientX - r.width - pad;
+    if (y + r.height > innerHeight - 8) y = e.clientY - r.height - pad;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  el.addEventListener('mouseleave', () => tip.classList.remove('on'));
+}
+
+/* ------------------------------------------------------------ selects */
+function catOptions(sel, val, {allowAll = false, allLabel = 'All categories'} = {}) {
+  const cats = Object.keys(S.taxonomy);
+  sel.innerHTML =
+    (allowAll ? `<option value="">${allLabel}</option>` : '') +
+    cats.map(c => `<option value="${esc(c)}"${c === val ? ' selected' : ''}>${esc(c)}${isExcl(c) ? ' ·  excluded' : ''}</option>`).join('');
+  if (!allowAll && !cats.includes(val)) sel.value = cats[0];
+}
+function subOptions(sel, cat, val, {allowAll = false, allLabel = 'All sub-categories'} = {}) {
+  const subs = S.taxonomy[cat] || [];
+  sel.innerHTML =
+    (allowAll ? `<option value="">${allLabel}</option>` : '') +
+    subs.map(s => `<option value="${esc(s)}"${s === val ? ' selected' : ''}>${esc(s)}</option>`).join('');
+  if (!allowAll && !subs.includes(val)) sel.value = subs[0] ?? '';
+}
+
+/* ============================================================ OVERVIEW */
+function renderTiles() {
+  const c = constructionTxns();
+  let total = 0, confirmed = 0, review = 0, inferred = 0;
+  for (const t of c) {
+    const v = spendOf(t);
+    total += v;
+    if (t.conf === 'confirmed') confirmed += v;
+    else if (t.conf === 'inferred') inferred += v;
+    else review += v;
+  }
+  const excl = S.txns.filter(t => isExcl(t.cat)).reduce((a,t) => a + spendOf(t), 0);
+  const nReview = c.filter(t => t.conf === 'review' && t.amount < 0).length;
+  // Calendar-month counting overstates the denominator: the statement opens on
+  // 30 Apr, so April contributes one day. Use the real span instead.
+  const days = spanDays(S.txns);
+  const perMonth = total / days * 30.44;
+
+  $('tiles').innerHTML = `
+    <div class="tile hero">
+      <div class="k">Total construction spend</div>
+      <div class="v">${short(total)}</div>
+      <div class="n">${inr(total)} across ${c.filter(t => t.amount < 0).length} payments</div>
+    </div>
+    <div class="tile">
+      <div class="k">Confirmed</div>
+      <div class="v">${short(confirmed + inferred)}</div>
+      <div class="n">${total ? Math.round((confirmed+inferred)/total*100) : 0}% of spend is vendor-identified</div>
+    </div>
+    <div class="tile">
+      <div class="k">Needs review</div>
+      <div class="v">${short(review)}</div>
+      <div class="n">${nReview} payments still to confirm</div>
+    </div>
+    <div class="tile">
+      <div class="k">Monthly run rate</div>
+      <div class="v">${short(perMonth)}</div>
+      <div class="n">Over ${days} days of statement</div>
+    </div>
+    <div class="tile">
+      <div class="k">Excluded</div>
+      <div class="v">${short(excl)}</div>
+      <div class="n">Loans, cards, transfers, household</div>
+    </div>`;
+}
+
+const openCats = new Set();
+
+function renderCatChart() {
+  const byCat = new Map(), bySub = new Map();   // bySub: cat -> Map(sub -> amount)
+  for (const t of constructionTxns()) {
+    const v = spendOf(t);
+    if (!v) continue;
+    byCat.set(t.cat, (byCat.get(t.cat) || 0) + v);
+    if (!bySub.has(t.cat)) bySub.set(t.cat, new Map());
+    const m = bySub.get(t.cat);
+    m.set(t.sub, (m.get(t.sub) || 0) + v);
+  }
+  const rows = [...byCat.entries()].sort((a,b) => b[1] - a[1]);
+  const total = rows.reduce((a,r) => a + r[1], 0);
+  const max = Math.max(1, ...rows.map(r => r[1]));
+  const el = $('catChart');
+
+  if (!rows.length) { el.innerHTML = '<div class="empty">No construction spend in the current data.</div>'; return; }
+
+  el.innerHTML = rows.map(([c, v]) => {
+    const open = openCats.has(c);
+    const subs = [...(bySub.get(c) || new Map()).entries()].sort((a,b) => b[1] - a[1]);
+    const head = `
+      <div class="row${open ? ' open' : ''}" data-cat="${esc(c)}">
+        <div class="lbl"><span class="caret">▶</span><span>${esc(c)}</span></div>
+        <div class="track"><div class="fill" style="width:${Math.max(1.5, v/max*100)}%"></div></div>
+        <div class="val">${short(v)}<span class="pct">${(v/total*100).toFixed(1)}%</span></div>
+      </div>`;
+    const body = open ? subs.map(([s, sv]) => `
+      <div class="row sub">
+        <div class="lbl">${esc(s)}</div>
+        <div class="track"><div class="fill" style="width:${Math.max(1.5, sv/max*100)}%"></div></div>
+        <div class="val">${short(sv)}<span class="pct">${(sv/v*100).toFixed(0)}% of cat</span></div>
+      </div>`).join('') : '';
+    return head + body;
+  }).join('');
+
+  el.querySelectorAll('.row[data-cat]').forEach(r => {
+    const c = r.dataset.cat, v = byCat.get(c);
+    bindTip(r, `<div class="tt">${esc(c)}</div><div class="tv">${inr(v)}</div>
+      <div class="tm">${(v/total*100).toFixed(1)}% of construction spend · click to expand</div>`);
+    r.addEventListener('click', () => { openCats.has(c) ? openCats.delete(c) : openCats.add(c); renderCatChart(); });
+  });
+}
+
+const SERIES = ['--s1','--s2','--s3','--s4','--s5','--s6'];
+
+function renderMonthChart() {
+  const c = constructionTxns();
+  const byCat = new Map();
+  for (const t of c) byCat.set(t.cat, (byCat.get(t.cat) || 0) + spendOf(t));
+  const top = [...byCat.entries()].sort((a,b) => b[1] - a[1]).slice(0,5).map(r => r[0]);
+  const keys = [...top, 'Other'];
+
+  const months = [...new Set(c.map(t => ym(t.date)))].sort();
+  const grid = new Map(months.map(m => [m, Object.fromEntries(keys.map(k => [k, 0]))]));
+  for (const t of c) {
+    const v = spendOf(t);
+    if (!v) continue;
+    const k = top.includes(t.cat) ? t.cat : 'Other';
+    grid.get(ym(t.date))[k] += v;
+  }
+  const totals = months.map(m => keys.reduce((a,k) => a + grid.get(m)[k], 0));
+  const max = Math.max(1, ...totals);
+
+  $('monthChart').innerHTML = months.map((m, i) => {
+    const g = grid.get(m);
+    const segs = keys.map((k, j) => {
+      const v = g[k];
+      if (!v) return '';
+      const h = v / max * 100;
+      const col = k === 'Other' ? 'var(--baseline)' : `var(${SERIES[j]})`;
+      return `<div class="seg" data-m="${m}" data-k="${esc(k)}" data-v="${v}"
+                   style="height:${h}%; background:${col}"></div>`;
+    }).reverse().join('');
+    return `<div class="mcol">
+        <div class="mstack" style="height:100%">${segs}</div>
+        <div class="mfoot"><div class="m">${ymLabel(m)}</div><div class="t">${short(totals[i])}</div></div>
+      </div>`;
+  }).join('');
+
+  $('monthChart').querySelectorAll('.seg').forEach(s => {
+    const v = +s.dataset.v, m = s.dataset.m;
+    const tot = totals[months.indexOf(m)];
+    bindTip(s, `<div class="tt">${esc(s.dataset.k)}</div><div class="tv">${inr(v)}</div>
+      <div class="tm">${ymLabel(m)} · ${(v/tot*100).toFixed(0)}% of that month</div>`);
+  });
+
+  $('monthLegend').innerHTML = keys.map((k, j) => {
+    const col = k === 'Other' ? 'var(--baseline)' : `var(${SERIES[j]})`;
+    return `<span><i class="swatch" style="background:${col}"></i>${esc(k)}</span>`;
+  }).join('');
+}
+
+function renderVendorChart() {
+  const by = new Map();
+  for (const t of constructionTxns()) {
+    const v = spendOf(t);
+    if (!v) continue;
+    by.set(t.vendor, (by.get(t.vendor) || 0) + v);
+  }
+  const rows = [...by.entries()].sort((a,b) => b[1] - a[1]).slice(0, 12);
+  const max = Math.max(1, ...rows.map(r => r[1]));
+  const grand = [...by.values()].reduce((a,b) => a+b, 0);
+
+  $('vendorChart').innerHTML = rows.map(([v, amt]) => `
+    <div class="row" data-v="${esc(v)}">
+      <div class="lbl">${esc(v)}</div>
+      <div class="track"><div class="fill" style="width:${Math.max(1.5, amt/max*100)}%"></div></div>
+      <div class="val">${short(amt)}<span class="pct">${(amt/grand*100).toFixed(1)}%</span></div>
+    </div>`).join('');
+
+  $('vendorChart').querySelectorAll('.row').forEach(r => {
+    const name = r.dataset.v;
+    const ts = constructionTxns().filter(t => t.vendor === name && t.amount < 0);
+    const amt = by.get(name);
+    bindTip(r, `<div class="tt">${esc(name)}</div><div class="tv">${inr(amt)}</div>
+      <div class="tm">${ts.length} payment${ts.length === 1 ? '' : 's'} · ${esc(ts[0]?.cat || '')} › ${esc(ts[0]?.sub || '')}</div>`);
+    r.addEventListener('click', () => { go('txns'); $('q').value = name; renderTable(); });
+  });
+}
+
+/* ============================================================ TXNS */
+let selection = new Set();
+
+function filtered() {
+  const q = $('q').value.trim().toLowerCase();
+  const fc = $('fCat').value, fs = $('fSub').value, fk = $('fConf').value, fm = $('fMonth').value;
+  const onlyC = $('fConstr').checked, onlyD = $('fDebit').checked;
+  return S.txns.filter(t => {
+    if (onlyC && isExcl(t.cat)) return false;
+    if (onlyD && t.amount >= 0) return false;
+    if (fc && t.cat !== fc) return false;
+    if (fs && t.sub !== fs) return false;
+    if (fk && t.conf !== fk) return false;
+    if (fm && ym(t.date) !== fm) return false;
+    if (q && !(t.vendor.toLowerCase().includes(q) || t.raw.toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+function renderFilterSelects() {
+  const fc = $('fCat'), fs = $('fSub'), fm = $('fMonth');
+  const cv = fc.value, sv = fs.value, mv = fm.value;
+  catOptions(fc, cv, {allowAll: true});
+  fc.value = Object.keys(S.taxonomy).includes(cv) ? cv : '';
+  if (fc.value) { subOptions(fs, fc.value, sv, {allowAll: true}); fs.value = (S.taxonomy[fc.value] || []).includes(sv) ? sv : ''; }
+  else { fs.innerHTML = '<option value="">All sub-categories</option>'; }
+
+  const months = [...new Set(S.txns.map(t => ym(t.date)))].sort();
+  fm.innerHTML = '<option value="">All months</option>' + months.map(m => `<option value="${m}">${ymLabel(m)}</option>`).join('');
+  fm.value = mv;
+}
+
+function renderTable() {
+  const rows = filtered();
+  const tb = $('tbody');
+  const cats = Object.keys(S.taxonomy);
+
+  $('cnt').textContent = `${rows.length} of ${S.txns.length} transactions · ${inr(rows.reduce((a,t) => a + spendOf(t), 0))}`;
+
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="9"><div class="empty">Nothing matches these filters.</div></td></tr>'; return; }
+
+  tb.innerHTML = rows.map(t => {
+    const co = cats.map(c => `<option value="${esc(c)}"${c === t.cat ? ' selected' : ''}>${esc(c)}</option>`).join('');
+    const so = (S.taxonomy[t.cat] || []).map(s => `<option value="${esc(s)}"${s === t.sub ? ' selected' : ''}>${esc(s)}</option>`).join('');
+    const cr = t.amount >= 0;
+    return `<tr data-id="${t.id}" class="${selection.has(t.id) ? 'sel' : ''}">
+      <td><input type="checkbox" class="rowsel" data-id="${t.id}"${selection.has(t.id) ? ' checked' : ''}></td>
+      <td class="dt">${dmy(t.date)}</td>
+      <td class="vn" title="${esc(t.vendor)}">${esc(t.vendor)}</td>
+      <td class="rawc" title="${esc(t.raw)}">${esc(t.raw)}</td>
+      <td class="amt${cr ? ' cr' : ''}">${cr ? '+' : ''}${inr(t.amount)}</td>
+      <td><select class="cs cat" data-id="${t.id}">${co}</select></td>
+      <td><select class="cs sub" data-id="${t.id}">${so}</select></td>
+      <td><span class="pill ${isExcl(t.cat) ? 'excl' : t.conf}">${isExcl(t.cat) ? 'excluded' : t.conf}</span></td>
+      <td><input class="note" data-id="${t.id}" value="${esc(t.note)}" placeholder="add a note"></td>
+    </tr>`;
+  }).join('');
+
+  tb.querySelectorAll('select.cat').forEach(s => s.addEventListener('change', e => {
+    const t = S.txns.find(x => x.id === +e.target.dataset.id);
+    t.cat = e.target.value;
+    t.sub = (S.taxonomy[t.cat] || [])[0] ?? '';
+    t.conf = 'confirmed';
+    commit();
+  }));
+  tb.querySelectorAll('select.sub').forEach(s => s.addEventListener('change', e => {
+    const t = S.txns.find(x => x.id === +e.target.dataset.id);
+    t.sub = e.target.value;
+    t.conf = 'confirmed';
+    commit();
+  }));
+  tb.querySelectorAll('input.note').forEach(i => i.addEventListener('change', e => {
+    S.txns.find(x => x.id === +e.target.dataset.id).note = e.target.value;
+    save();
+  }));
+  tb.querySelectorAll('input.rowsel').forEach(i => i.addEventListener('change', e => {
+    const id = +e.target.dataset.id;
+    e.target.checked ? selection.add(id) : selection.delete(id);
+    e.target.closest('tr').classList.toggle('sel', e.target.checked);
+    renderBulk();
+  }));
+}
+
+function renderBulk() {
+  const bar = $('bulk');
+  bar.classList.toggle('on', selection.size > 0);
+  if (!selection.size) return;
+  const sum = S.txns.filter(t => selection.has(t.id)).reduce((a,t) => a + spendOf(t), 0);
+  $('bulkN').textContent = `${selection.size} selected · ${inr(sum)} →`;
+  const bc = $('bulkCat'), bs = $('bulkSub');
+  if (!bc.value || !S.taxonomy[bc.value]) { catOptions(bc, Object.keys(S.taxonomy)[0]); }
+  subOptions(bs, bc.value, bs.value);
+}
+
+/* ============================================================ VENDORS */
+function vendorRollup(constructionOnly) {
+  const m = new Map();
+  for (const t of S.txns) {
+    if (constructionOnly && isExcl(t.cat)) continue;
+    let v = m.get(t.vendor);
+    if (!v) { v = {vendor: t.vendor, n: 0, sum: 0, first: t.date, last: t.date, cats: new Set(), subs: new Set(), conf: new Set()}; m.set(t.vendor, v); }
+    v.n++; v.sum += spendOf(t);
+    if (t.date < v.first) v.first = t.date;
+    if (t.date > v.last) v.last = t.date;
+    v.cats.add(t.cat); v.subs.add(t.sub); v.conf.add(t.conf);
+  }
+  return [...m.values()].sort((a,b) => b.sum - a.sum);
+}
+
+function renderVendors() {
+  const q = $('vq').value.trim().toLowerCase();
+  const rows = vendorRollup($('vConstr').checked).filter(v => !q || v.vendor.toLowerCase().includes(q));
+  $('vcnt').textContent = `${rows.length} vendors · ${inr(rows.reduce((a,v) => a + v.sum, 0))}`;
+  const cats = Object.keys(S.taxonomy);
+  const tb = $('vbody');
+
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="7"><div class="empty">No vendors match.</div></td></tr>'; return; }
+
+  tb.innerHTML = rows.map(v => {
+    const mixedCat = v.cats.size > 1, mixedSub = v.subs.size > 1;
+    const cat = mixedCat ? '' : [...v.cats][0];
+    const sub = mixedSub ? '' : [...v.subs][0];
+    const co = (mixedCat ? '<option value="">— mixed —</option>' : '') +
+      cats.map(c => `<option value="${esc(c)}"${c === cat ? ' selected' : ''}>${esc(c)}</option>`).join('');
+    const so = (mixedSub ? '<option value="">— mixed —</option>' : '') +
+      (S.taxonomy[cat] || []).map(s => `<option value="${esc(s)}"${s === sub ? ' selected' : ''}>${esc(s)}</option>`).join('');
+    const conf = v.conf.has('review') ? 'review' : (v.conf.has('inferred') ? 'inferred' : 'confirmed');
+    return `<tr data-v="${esc(v.vendor)}">
+      <td class="vn" title="${esc(v.vendor)}">${esc(v.vendor)}</td>
+      <td class="amt">${v.n}</td>
+      <td class="amt">${inr(v.sum)}</td>
+      <td class="dt">${dmy(v.first)} → ${dmy(v.last)}</td>
+      <td><select class="cs vcat" data-v="${esc(v.vendor)}">${co}</select></td>
+      <td><select class="cs vsub" data-v="${esc(v.vendor)}">${so}</select></td>
+      <td><span class="pill ${conf}">${conf}</span></td>
+    </tr>`;
+  }).join('');
+
+  tb.querySelectorAll('select.vcat').forEach(s => s.addEventListener('change', e => {
+    assignVendor(e.target.dataset.v, e.target.value, null);
+  }));
+  tb.querySelectorAll('select.vsub').forEach(s => s.addEventListener('change', e => {
+    const row = e.target.closest('tr');
+    assignVendor(e.target.dataset.v, row.querySelector('select.vcat').value, e.target.value);
+  }));
+}
+
+function assignVendor(vendor, cat, sub) {
+  if (!cat) return;
+  const s = sub ?? (S.taxonomy[cat] || [])[0] ?? '';
+  for (const t of S.txns) {
+    if (t.vendor === vendor) { t.cat = cat; t.sub = s; t.conf = 'confirmed'; }
+  }
+  commit();
+}
+
+/* ============================================================ REVIEW */
+function renderReview() {
+  const m = new Map();
+  for (const t of S.txns) {
+    if (t.conf !== 'review' || t.amount >= 0) continue;
+    let v = m.get(t.vendor);
+    if (!v) { v = {vendor: t.vendor, n: 0, sum: 0, cat: t.cat, sub: t.sub}; m.set(t.vendor, v); }
+    v.n++; v.sum += spendOf(t);
+  }
+  const rows = [...m.values()].sort((a,b) => b.sum - a.sum);
+  const cats = Object.keys(S.taxonomy);
+  const tb = $('rbody');
+  $('badgeReview').textContent = rows.length || '';
+
+  if (!rows.length) {
+    tb.innerHTML = '<tr><td colspan="7"><div class="empty">Nothing left to review — every payment has a confirmed category.</div></td></tr>';
+    return;
+  }
+
+  tb.innerHTML = rows.map(v => `
+    <tr data-v="${esc(v.vendor)}">
+      <td class="vn" title="${esc(v.vendor)}">${esc(v.vendor)}</td>
+      <td class="amt">${v.n}</td>
+      <td class="amt">${inr(v.sum)}</td>
+      <td style="color:var(--muted); font-size:11.5px">${esc(v.cat)} › ${esc(v.sub)}</td>
+      <td><select class="cs rcat" data-v="${esc(v.vendor)}">${
+        cats.map(c => `<option value="${esc(c)}"${c === v.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')
+      }</select></td>
+      <td><select class="cs rsub" data-v="${esc(v.vendor)}">${
+        (S.taxonomy[v.cat] || []).map(s => `<option value="${esc(s)}"${s === v.sub ? ' selected' : ''}>${esc(s)}</option>`).join('')
+      }</select></td>
+      <td><button class="primary rok" data-v="${esc(v.vendor)}">Confirm</button></td>
+    </tr>`).join('');
+
+  tb.querySelectorAll('select.rcat').forEach(s => s.addEventListener('change', e => {
+    const sub = e.target.closest('tr').querySelector('select.rsub');
+    subOptions(sub, e.target.value, null);
+  }));
+  tb.querySelectorAll('button.rok').forEach(b => b.addEventListener('click', e => {
+    const tr = e.target.closest('tr');
+    assignVendor(e.target.dataset.v, tr.querySelector('select.rcat').value, tr.querySelector('select.rsub').value);
+  }));
+}
+
+/* ============================================================ CATEGORIES */
+function renderCats() {
+  const counts = new Map(), sums = new Map();   // counts: cat -> Map(sub -> n)
+  for (const t of S.txns) {
+    if (!counts.has(t.cat)) counts.set(t.cat, new Map());
+    const m = counts.get(t.cat);
+    m.set(t.sub, (m.get(t.sub) || 0) + 1);
+    sums.set(t.cat, (sums.get(t.cat) || 0) + spendOf(t));
+  }
+
+  $('catgrid').innerHTML = Object.entries(S.taxonomy).map(([c, subs]) => {
+    const ex = isExcl(c);
+    const used = S.txns.filter(t => t.cat === c).length;
+    return `<div class="catcard${ex ? ' excl' : ''}">
+      <h3>
+        <span style="flex:1">${esc(c)}</span>
+        ${ex ? '<span class="tag">excluded</span>' : ''}
+        <button data-act="rencat" data-c="${esc(c)}" title="Rename">✎</button>
+        <button data-act="togglecat" data-c="${esc(c)}" title="${ex ? 'Count as construction' : 'Exclude from construction totals'}">${ex ? '＋' : '⊘'}</button>
+        <button data-act="delcat" data-c="${esc(c)}" class="danger" title="Delete">✕</button>
+      </h3>
+      <div class="meta">${used} transactions · ${inr(sums.get(c) || 0)}</div>
+      <div class="subs">${subs.map(s => `
+        <div class="subrow">
+          <span class="sname">${esc(s)}</span>
+          <span class="scount">${(counts.get(c) || new Map()).get(s) || 0}</span>
+          <button data-act="rensub" data-c="${esc(c)}" data-s="${esc(s)}" title="Rename">✎</button>
+          <button data-act="delsub" data-c="${esc(c)}" data-s="${esc(s)}" class="danger" title="Delete">✕</button>
+        </div>`).join('')}</div>
+      <div class="addrow">
+        <input placeholder="New sub-category…" data-c="${esc(c)}">
+        <button data-act="addsub" data-c="${esc(c)}">Add</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  $('catgrid').querySelectorAll('button[data-act]').forEach(b => b.addEventListener('click', onCatAction));
+  $('catgrid').querySelectorAll('.addrow input').forEach(i => i.addEventListener('keydown', e => {
+    if (e.key === 'Enter') addSub(i.dataset.c, i.value);
+  }));
+}
+
+function addSub(cat, name) {
+  name = (name || '').trim();
+  if (!name) return;
+  if (S.taxonomy[cat].includes(name)) { alert('That sub-category already exists.'); return; }
+  S.taxonomy[cat].push(name);
+  commit();
+}
+
+function onCatAction(e) {
+  const b = e.currentTarget, act = b.dataset.act, c = b.dataset.c, s = b.dataset.s;
+
+  if (act === 'addsub') { addSub(c, b.previousElementSibling.value); return; }
+
+  if (act === 'rencat') {
+    const n = prompt('Rename category', c);
+    if (!n || n.trim() === c) return;
+    const name = n.trim();
+    if (S.taxonomy[name]) { alert('A category with that name already exists.'); return; }
+    const next = {};
+    for (const [k, v] of Object.entries(S.taxonomy)) next[k === c ? name : k] = v;
+    S.taxonomy = next;
+    S.excluded = S.excluded.map(x => x === c ? name : x);
+    S.txns.forEach(t => { if (t.cat === c) t.cat = name; });
+    commit(); return;
+  }
+
+  if (act === 'togglecat') {
+    S.excluded = isExcl(c) ? S.excluded.filter(x => x !== c) : [...S.excluded, c];
+    commit(); return;
+  }
+
+  if (act === 'delcat') {
+    const n = S.txns.filter(t => t.cat === c).length;
+    const others = Object.keys(S.taxonomy).filter(x => x !== c);
+    if (!others.length) { alert('You need at least one category.'); return; }
+    if (!confirm(`Delete "${c}"?` + (n ? `\n\n${n} transaction(s) will move to "Unclassified › Needs Review".` : ''))) return;
+    delete S.taxonomy[c];
+    S.excluded = S.excluded.filter(x => x !== c);
+    if (n) reassignOrphans(t => t.cat === c);
+    commit(); return;
+  }
+
+  if (act === 'rensub') {
+    const n = prompt('Rename sub-category', s);
+    if (!n || n.trim() === s) return;
+    const name = n.trim();
+    if (S.taxonomy[c].includes(name)) { alert('That sub-category already exists.'); return; }
+    S.taxonomy[c] = S.taxonomy[c].map(x => x === s ? name : x);
+    S.txns.forEach(t => { if (t.cat === c && t.sub === s) t.sub = name; });
+    commit(); return;
+  }
+
+  if (act === 'delsub') {
+    if (S.taxonomy[c].length === 1) { alert('A category needs at least one sub-category.'); return; }
+    const n = S.txns.filter(t => t.cat === c && t.sub === s).length;
+    if (!confirm(`Delete "${s}"?` + (n ? `\n\n${n} transaction(s) will move to the first sub-category of "${c}".` : ''))) return;
+    S.taxonomy[c] = S.taxonomy[c].filter(x => x !== s);
+    const fallback = S.taxonomy[c][0];
+    S.txns.forEach(t => { if (t.cat === c && t.sub === s) { t.sub = fallback; t.conf = 'review'; } });
+    commit(); return;
+  }
+}
+
+/** Park transactions whose category vanished into a guaranteed home. */
+function reassignOrphans(pred) {
+  if (!S.taxonomy['Unclassified']) S.taxonomy['Unclassified'] = ['Needs Review'];
+  if (!S.taxonomy['Unclassified'].length) S.taxonomy['Unclassified'].push('Needs Review');
+  const sub = S.taxonomy['Unclassified'][0];
+  S.txns.forEach(t => { if (pred(t)) { t.cat = 'Unclassified'; t.sub = sub; t.conf = 'review'; } });
+}
+
+/* ============================================================ shell */
+function commit() { save(); renderAll(); }
+
+function renderAll() {
+  // any transaction pointing at a category/sub that no longer exists gets parked
+  reassignOrphans(t => !S.taxonomy[t.cat]);
+  S.txns.forEach(t => {
+    const subs = S.taxonomy[t.cat];
+    if (subs && !subs.includes(t.sub)) { t.sub = subs[0]; t.conf = 'review'; }
+  });
+
+  $('metaLine').textContent = `${SEED.meta.holder} · ${SEED.meta.account} · ${SEED.meta.period}`;
+  renderTiles(); renderCatChart(); renderMonthChart(); renderVendorChart();
+  renderFilterSelects(); renderTable(); renderBulk();
+  renderVendors(); renderReview(); renderCats();
+  $('badgeVendors').textContent = vendorRollup(true).length;
+}
+
+function go(v) {
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+  document.querySelectorAll('.view').forEach(d => d.classList.toggle('on', d.id === 'view-' + v));
+  window.scrollTo({top: 0});
+}
+document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('click', () => go(b.dataset.view)));
+
+/* filters */
+['q','fConf','fMonth','fConstr','fDebit'].forEach(id => {
+  $(id).addEventListener($(id).type === 'text' ? 'input' : 'change', renderTable);
+});
+$('fCat').addEventListener('change', () => {
+  const c = $('fCat').value;
+  if (c) subOptions($('fSub'), c, null, {allowAll: true});
+  else $('fSub').innerHTML = '<option value="">All sub-categories</option>';
+  renderTable();
+});
+$('fSub').addEventListener('change', renderTable);
+$('selAll').addEventListener('change', e => {
+  const rows = filtered();
+  if (e.target.checked) rows.forEach(t => selection.add(t.id));
+  else rows.forEach(t => selection.delete(t.id));
+  renderTable(); renderBulk();
+});
+
+/* bulk */
+$('bulkCat').addEventListener('change', () => subOptions($('bulkSub'), $('bulkCat').value, null));
+$('bulkApply').addEventListener('click', () => {
+  const c = $('bulkCat').value, s = $('bulkSub').value;
+  if (!c) return;
+  S.txns.forEach(t => { if (selection.has(t.id)) { t.cat = c; t.sub = s; t.conf = 'confirmed'; } });
+  selection.clear();
+  commit();
+});
+$('bulkClear').addEventListener('click', () => { selection.clear(); renderTable(); renderBulk(); });
+
+/* vendors */
+$('vq').addEventListener('input', renderVendors);
+$('vConstr').addEventListener('change', renderVendors);
+
+/* categories */
+$('addCat').addEventListener('click', () => {
+  const name = $('newCat').value.trim();
+  if (!name) { alert('Give the category a name first.'); return; }
+  if (S.taxonomy[name]) { alert('That category already exists.'); return; }
+  S.taxonomy[name] = ['General'];
+  if ($('newCatKind').value === 'excluded') S.excluded.push(name);
+  $('newCat').value = '';
+  commit();
+});
+$('newCat').addEventListener('keydown', e => { if (e.key === 'Enter') $('addCat').click(); });
+
+/* export / import */
+$('btnCsv').addEventListener('click', () => {
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [['Date','Vendor','Bank description','Reference','Amount (INR)','Spend (INR)','Category','Sub-category','Counts as construction','Status','Note'].join(',')];
+  for (const t of S.txns) {
+    lines.push([q(t.date), q(t.vendor), q(t.raw), q(t.ref), t.amount, spendOf(t),
+                q(t.cat), q(t.sub), isExcl(t.cat) ? 'No' : 'Yes', q(t.conf), q(t.note)].join(','));
+  }
+  download(new Blob(['\uFEFF' + lines.join('\n')], {type:'text/csv;charset=utf-8'}), 'construction_expenses.csv');
+});
+$('btnJson').addEventListener('click', () => {
+  download(new Blob([JSON.stringify(S, null, 1)], {type:'application/json'}), 'construction_dashboard_backup.json');
+});
+$('btnImport').addEventListener('click', () => $('fileIn').click());
+$('fileIn').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const p = JSON.parse(ev.target.result);
+      if (!p.txns || !p.taxonomy) throw new Error('not a dashboard backup');
+      S = p;
+      if (!Array.isArray(S.excluded)) S.excluded = [];
+      selection.clear();
+      applyTheme();
+      commit();
+      alert('Backup restored.');
+    } catch (err) { alert('Could not read that file: ' + err.message); }
+  };
+  r.readAsText(f);
+  e.target.value = '';
+});
+$('btnReset').addEventListener('click', () => {
+  if (!confirm('Discard every edit and return to the original categorisation?\n\nSave a backup first if you want to keep this work.')) return;
+  const theme = S.theme;
+  S = freshState();
+  S.theme = theme;
+  selection.clear();
+  commit();
+});
+
+function download(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+/* theme */
+function applyTheme() {
+  if (S.theme) document.documentElement.setAttribute('data-theme', S.theme);
+  else document.documentElement.removeAttribute('data-theme');
+}
+$('btnTheme').addEventListener('click', () => {
+  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const cur = S.theme || (dark ? 'dark' : 'light');
+  S.theme = cur === 'dark' ? 'light' : 'dark';
+  applyTheme(); save();
+});
+
+applyTheme();
+renderAll();
+</script>
+</body>
+</html>

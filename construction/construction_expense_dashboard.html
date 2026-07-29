@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Construction Expense Dashboard</title>
+<style>
+:root {
+  color-scheme: light;
+  --plane:        #f9f9f7;
+  --surface:      #fcfcfb;
+  --surface-2:    #ffffff;
+  --sunken:       #f0efec;
+  --border:       rgba(11,11,11,0.10);
+  --hairline:     #e1e0d9;
+  --baseline:     #c3c2b7;
+  --ink:          #0b0b0b;
+  --ink-2:        #52514e;
+  --muted:        #898781;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300;
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --seq-100:#cde2fb; --seq-250:#86b6ef; --seq-450:#2a78d6; --seq-600:#184f95;
+  --shadow: 0 1px 2px rgba(11,11,11,.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --plane:#0d0d0d; --surface:#1a1a19; --surface-2:#232322; --sunken:#232322;
+    --border: rgba(255,255,255,0.10); --hairline:#2c2c2a; --baseline:#383835;
+    --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300;
+    --seq-100:#0d366b; --seq-250:#184f95; --seq-450:#3987e5; --seq-600:#86b6ef;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane:#0d0d0d; --surface:#1a1a19; --surface-2:#232322; --sunken:#232322;
+  --border: rgba(255,255,255,0.10); --hairline:#2c2c2a; --baseline:#383835;
+  --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300;
+  --seq-100:#0d366b; --seq-250:#184f95; --seq-450:#3987e5; --seq-600:#86b6ef;
+  --shadow: none;
+}
+
+* { box-sizing: border-box; }
+html, body { max-width: 100%; overflow-x: hidden; }
+body {
+  margin:0; background: var(--plane); color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased;
+}
+h1,h2,h3 { margin:0; font-weight:650; letter-spacing:-.01em; }
+button, select, input { font-family: inherit; font-size: 13px; color: var(--ink); }
+
+/* ---------- chrome ---------- */
+header {
+  background: var(--surface); border-bottom: 1px solid var(--hairline);
+  padding: 14px 20px; position: sticky; top:0; z-index: 40;
+}
+.hrow { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
+.hrow h1 { font-size: 17px; }
+.sub { color: var(--ink-2); font-size: 12px; margin-top:2px; }
+.spacer { flex:1 1 auto; }
+.actions { display:flex; gap:6px; flex-wrap:wrap; }
+
+button {
+  padding: 6px 11px; border-radius: 7px; border:1px solid var(--border);
+  background: var(--surface-2); cursor:pointer; font-weight:550; box-shadow: var(--shadow);
+}
+button:hover { background: var(--sunken); }
+button.primary { background: var(--s1); border-color: var(--s1); color:#fff; }
+button.primary:hover { filter: brightness(.93); }
+button.danger:hover { color: var(--critical); border-color: var(--critical); }
+button.icon { padding: 6px 9px; }
+button:disabled { opacity:.4; cursor:not-allowed; }
+
+nav.tabs { display:flex; gap:2px; margin-top:12px; flex-wrap:wrap; }
+nav.tabs button {
+  background:transparent; border:none; box-shadow:none; border-radius:0;
+  padding: 7px 12px; color: var(--ink-2); border-bottom: 2px solid transparent;
+}
+nav.tabs button:hover { color: var(--ink); background: transparent; }
+nav.tabs button.on { color: var(--s1); border-bottom-color: var(--s1); font-weight:650; }
+.tab-badge {
+  display:inline-block; margin-left:5px; background: var(--sunken); color: var(--ink-2);
+  border-radius:999px; padding:0 6px; font-size:11px; font-weight:650;
+}
+nav.tabs button.on .tab-badge { background: var(--s1); color:#fff; }
+
+main { max-width: 1440px; margin: 0 auto; padding: 20px; }
+.view { display:none; }
+.view.on { display:block; }
+
+section {
+  background: var(--surface); border:1px solid var(--hairline); border-radius: 12px;
+  padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow);
+}
+section > h2 { font-size: 14px; }
+section > .desc { color: var(--ink-2); font-size:12px; margin: 3px 0 16px; }
+
+/* ---------- stat tiles ---------- */
+.tiles { display:grid; grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); gap:12px; margin-bottom:16px; }
+.tile {
+  background: var(--surface); border:1px solid var(--hairline); border-radius:12px;
+  padding: 14px 16px; box-shadow: var(--shadow);
+}
+.tile .k { font-size:11px; font-weight:650; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+.tile .v { font-size:25px; font-weight:700; margin-top:5px; letter-spacing:-.02em; }
+.tile .n { font-size:11.5px; color: var(--ink-2); margin-top:3px; }
+.tile.hero { border-color: var(--s1); }
+.tile.hero .v { color: var(--s1); }
+
+/* ---------- bar chart ---------- */
+.chart { display:flex; flex-direction:column; gap:1px; }
+.row {
+  display:grid; grid-template-columns: 210px 1fr 108px; gap:12px; align-items:center;
+  padding: 4px 6px; border-radius:6px; cursor:pointer;
+}
+.row:hover { background: var(--sunken); }
+.row.sub { grid-template-columns: 210px 1fr 108px; cursor:default; }
+.row.sub .lbl { padding-left:16px; color: var(--ink-2); font-size:12.5px; }
+.row.sub:hover { background: transparent; }
+.lbl { font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:flex; align-items:center; gap:6px; }
+.caret { color: var(--muted); font-size:10px; width:9px; flex:none; transition: transform .12s; }
+.row.open .caret { transform: rotate(90deg); }
+.track { background: var(--sunken); border-radius:4px; height:16px; position:relative; }
+.fill { height:100%; border-radius:4px; background: var(--seq-450); }
+.row.sub .fill { background: var(--seq-250); height:11px; }
+.row.sub .track { height:11px; }
+.val { text-align:right; font-variant-numeric: tabular-nums; font-weight:600; font-size:12.5px; }
+.val .pct { display:block; font-size:10.5px; color:var(--muted); font-weight:500; }
+
+/* ---------- stacked monthly ---------- */
+.months { display:flex; gap:18px; align-items:flex-end; height:230px; padding: 0 4px; overflow-x:auto; }
+.mcol { flex:1 1 0; min-width:78px; display:flex; flex-direction:column; height:100%; }
+.mstack { flex:1; display:flex; flex-direction:column; justify-content:flex-end; gap:2px; }
+.seg { border-radius:2px; min-height:2px; }
+.mstack .seg:first-child { border-radius:4px 4px 2px 2px; }
+.mfoot { text-align:center; padding-top:8px; border-top:1px solid var(--baseline); margin-top:6px; }
+.mfoot .m { font-size:12px; font-weight:600; }
+.mfoot .t { font-size:11.5px; color:var(--ink-2); font-variant-numeric:tabular-nums; }
+.legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:16px; font-size:12px; color:var(--ink-2); }
+.legend span { display:inline-flex; align-items:center; gap:6px; }
+.swatch { width:10px; height:10px; border-radius:3px; flex:none; }
+
+/* ---------- tooltip ---------- */
+#tip {
+  position:fixed; z-index:100; pointer-events:none; opacity:0; transition:opacity .1s;
+  background: var(--surface-2); border:1px solid var(--hairline); border-radius:8px;
+  padding:8px 10px; font-size:12px; box-shadow: 0 4px 14px rgba(0,0,0,.14); max-width:260px;
+}
+#tip.on { opacity:1; }
+#tip .tt { font-weight:650; margin-bottom:2px; }
+#tip .tv { font-variant-numeric: tabular-nums; }
+#tip .tm { color: var(--muted); font-size:11px; }
+
+/* ---------- filters ---------- */
+.filters { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+.filters input[type=text], .filters select {
+  padding:6px 9px; border-radius:7px; border:1px solid var(--border); background: var(--surface-2);
+}
+.filters input[type=text] { min-width: 200px; }
+.filters label.chk { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-2); cursor:pointer; }
+.count { font-size:12px; color:var(--muted); margin-left:auto; font-variant-numeric:tabular-nums; }
+
+/* ---------- table ---------- */
+.tblwrap { overflow-x:auto; border:1px solid var(--hairline); border-radius:10px; }
+table { width:100%; border-collapse:collapse; font-size:12.5px; }
+thead th {
+  text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; font-weight:650;
+  color:var(--muted); background: var(--surface); padding:9px 10px;
+  border-bottom:1px solid var(--hairline); position:sticky; top:0; z-index:2; white-space:nowrap;
+}
+tbody td { padding:6px 10px; border-bottom:1px solid var(--hairline); vertical-align:middle; }
+tbody tr:last-child td { border-bottom:none; }
+tbody tr:hover { background: var(--sunken); }
+tbody tr.sel { background: color-mix(in srgb, var(--s1) 9%, transparent); }
+td.amt { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; font-weight:600; }
+td.amt.cr { color: var(--good); }
+td.dt { white-space:nowrap; color:var(--ink-2); font-variant-numeric:tabular-nums; }
+td.vn { font-weight:600; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+td.rawc { max-width:230px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:11.5px; }
+select.cs { padding:4px 5px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); max-width:190px; width:100%; font-size:12px; }
+input.note { padding:4px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); width:100%; min-width:110px; font-size:12px; }
+
+.pill { display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:650; padding:2px 7px; border-radius:999px; white-space:nowrap; }
+.pill.confirmed { background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good); }
+.pill.inferred  { background: color-mix(in srgb, var(--warning) 20%, transparent); color: #8a5c00; }
+.pill.review    { background: color-mix(in srgb, var(--serious) 20%, transparent); color: #a4491d; }
+:root[data-theme="dark"] .pill.inferred, :root[data-theme="dark"] .pill.review { color: var(--ink); }
+@media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) .pill.inferred,
+  :root:where(:not([data-theme="light"])) .pill.review { color: var(--ink); } }
+.pill.excl { background: var(--sunken); color: var(--muted); }
+
+/* ---------- bulk bar ---------- */
+.bulk {
+  display:none; gap:8px; align-items:center; flex-wrap:wrap; padding:10px 12px; margin-bottom:12px;
+  background: color-mix(in srgb, var(--s1) 8%, var(--surface)); border:1px solid var(--s1); border-radius:9px;
+}
+.bulk.on { display:flex; }
+.bulk .n { font-weight:650; font-size:12.5px; }
+
+/* ---------- taxonomy editor ---------- */
+.catgrid { display:grid; grid-template-columns: repeat(auto-fill, minmax(290px,1fr)); gap:12px; }
+.catcard { border:1px solid var(--hairline); border-radius:10px; padding:12px 14px; background: var(--surface-2); }
+.catcard.excl { opacity:.72; }
+.catcard h3 { font-size:13px; display:flex; align-items:center; gap:7px; }
+.catcard .meta { font-size:11px; color:var(--muted); margin:2px 0 9px; font-variant-numeric:tabular-nums; }
+.subs { display:flex; flex-direction:column; gap:3px; }
+.subrow { display:flex; align-items:center; gap:6px; font-size:12.5px; padding:2px 0; }
+.subrow .sname { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.subrow .scount { color:var(--muted); font-size:11px; font-variant-numeric:tabular-nums; }
+.subrow button, .catcard h3 button { padding:1px 6px; font-size:11px; box-shadow:none; }
+.addrow { display:flex; gap:5px; margin-top:9px; }
+.addrow input { flex:1; padding:4px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface); font-size:12px; min-width:0; }
+.tag { font-size:10px; font-weight:650; padding:1px 6px; border-radius:4px; background:var(--sunken); color:var(--muted); text-transform:uppercase; letter-spacing:.03em; }
+
+.empty { padding:30px; text-align:center; color:var(--muted); font-size:13px; }
+.note-tip { font-size:11.5px; color:var(--muted); margin-top:10px; }
+@media (max-width: 720px) {
+  .row, .row.sub { grid-template-columns: 130px 1fr 86px; gap:8px; }
+  main { padding: 14px; }
+}
+</style>
+</head>
+<body>
+
+<div id="tip"></div>
+
+<header>
+  <div class="hrow">
+    <div>
+      <h1>Construction Expense Dashboard</h1>
+      <div class="sub" id="metaLine"></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="actions">
+      <button id="btnTheme" class="icon" title="Toggle light / dark">◐</button>
+      <button id="btnCsv">Export CSV</button>
+      <button id="btnJson">Save backup</button>
+      <button id="btnImport">Restore</button>
+      <button id="btnReset" class="danger">Reset</button>
+      <input type="file" id="fileIn" accept=".json" style="display:none">
+    </div>
+  </div>
+  <nav class="tabs">
+    <button data-view="overview" class="on">Overview</button>
+    <button data-view="txns">Transactions</button>
+    <button data-view="vendors">Vendors <span class="tab-badge" id="badgeVendors"></span></button>
+    <button data-view="review">Review queue <span class="tab-badge" id="badgeReview"></span></button>
+    <button data-view="cats">Categories</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ============ OVERVIEW ============ -->
+<div class="view on" id="view-overview">
+  <div class="tiles" id="tiles"></div>
+
+  <section>
+    <h2>Spend by category</h2>
+    <div class="desc">Construction categories only, ranked. Click a bar to open its sub-categories.</div>
+    <div class="chart" id="catChart"></div>
+  </section>
+
+  <section>
+    <h2>Monthly construction spend</h2>
+    <div class="desc">Stacked by the five largest categories; everything else grouped as Other.</div>
+    <div class="months" id="monthChart"></div>
+    <div class="legend" id="monthLegend"></div>
+  </section>
+
+  <section>
+    <h2>Top vendors</h2>
+    <div class="desc">Largest construction payees across the statement period.</div>
+    <div class="chart" id="vendorChart"></div>
+  </section>
+</div>
+
+<!-- ============ TRANSACTIONS ============ -->
+<div class="view" id="view-txns">
+  <section>
+    <h2>All transactions</h2>
+    <div class="desc">Change a category and the sub-category list follows it. Tick rows to re-assign several at once.</div>
+
+    <div class="filters">
+      <input type="text" id="q" placeholder="Search vendor or description…">
+      <select id="fCat"></select>
+      <select id="fSub"></select>
+      <select id="fConf">
+        <option value="">Any confidence</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="inferred">Inferred</option>
+        <option value="review">Needs review</option>
+      </select>
+      <select id="fMonth"></select>
+      <label class="chk"><input type="checkbox" id="fConstr" checked> Construction only</label>
+      <label class="chk"><input type="checkbox" id="fDebit" checked> Payments only</label>
+      <span class="count" id="cnt"></span>
+    </div>
+
+    <div class="bulk" id="bulk">
+      <span class="n" id="bulkN"></span>
+      <select id="bulkCat"></select>
+      <select id="bulkSub"></select>
+      <button class="primary" id="bulkApply">Apply</button>
+      <button id="bulkClear">Clear selection</button>
+    </div>
+
+    <div class="tblwrap">
+      <table>
+        <thead><tr>
+          <th style="width:28px"><input type="checkbox" id="selAll"></th>
+          <th>Date</th><th>Vendor</th><th>Bank description</th><th style="text-align:right">Amount</th>
+          <th>Category</th><th>Sub-category</th><th>Status</th><th>Note</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="note-tip">Edits save to this browser automatically. Use <b>Save backup</b> before switching machines.</div>
+  </section>
+</div>
+
+<!-- ============ VENDORS ============ -->
+<div class="view" id="view-vendors">
+  <section>
+    <h2>Vendor roll-up</h2>
+    <div class="desc">Assigning a vendor here re-categorises every one of its transactions at once — the fastest way to clear the backlog.</div>
+    <div class="filters">
+      <input type="text" id="vq" placeholder="Search vendor…">
+      <label class="chk"><input type="checkbox" id="vConstr" checked> Construction only</label>
+      <span class="count" id="vcnt"></span>
+    </div>
+    <div class="tblwrap">
+      <table>
+        <thead><tr>
+          <th>Vendor</th><th style="text-align:right">Txns</th><th style="text-align:right">Total paid</th>
+          <th>First → last</th><th>Category</th><th>Sub-category</th><th>Status</th>
+        </tr></thead>
+        <tbody id="vbody"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- ============ REVIEW ============ -->
+<div class="view" id="view-review">
+  <section>
+    <h2>Review queue</h2>
+    <div class="desc">Vendors the bank narration could not identify, largest first. Pick the trade and every payment to that vendor is filed.</div>
+    <div class="tblwrap">
+      <table>
+        <thead><tr>
+          <th>Vendor</th><th style="text-align:right">Txns</th><th style="text-align:right">Total paid</th>
+          <th>Currently filed as</th><th>Set category</th><th>Set sub-category</th><th></th>
+        </tr></thead>
+        <tbody id="rbody"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- ============ CATEGORIES ============ -->
+<div class="view" id="view-cats">
+  <section>
+    <h2>Category structure</h2>
+    <div class="desc">Add, rename or remove categories and sub-categories. Everything on the other tabs updates immediately.</div>
+    <div class="filters">
+      <input type="text" id="newCat" placeholder="New category name…" style="min-width:220px">
+      <select id="newCatKind">
+        <option value="construction">Construction cost</option>
+        <option value="excluded">Not construction (excluded)</option>
+      </select>
+      <button class="primary" id="addCat">Add category</button>
+    </div>
+    <div class="catgrid" id="catgrid"></div>
+  </section>
+</div>
+
+</main>
+
+<script>
+"use strict";
+const SEED = {"meta":{"account":"1614263140 · Kotak Mahindra Bank · Ahmedabad-Odhav","holder":"Nilesh Shivkumar Sahu","period":"30 Apr 2026 – 29 Jul 2026","source":"78c2b0fd-KM83261374_statement_1.csv"},"taxonomy":{"Labour & Contractors":["Main Civil Contractor","Masonry & RCC Labour","Painting Contractor","False Ceiling Contractor","Electrical Labour","Plumbing Labour","Carpentry Labour","Tiling & Flooring Labour","Daily Wage / Petty Labour","Unassigned Labour / Vendor"],"Structural Material":["Cement","Steel / TMT Bars","Bricks & Blocks","Sand & Aggregate","RMC / Concrete","Waterproofing"],"Stone, Tile & Flooring":["Granite & Marble","Tiles","Kota / Stone Slabs","Adhesives & Grout"],"Electrical & Lighting":["Switches & Panels","Lighting & Fixtures","Wiring & Cables","Fans & Appliances"],"Plumbing & Sanitary":["Pipes & Fittings","Sanitaryware","CP Fittings & Taps","Water Tank & Pump"],"Interior & Fit-out":["Furniture & Carpentry","Modular Kitchen","Wardrobes & Storage","False Ceiling Material","Glass & Aluminium","Doors & Windows"],"Finishes":["Paint & Primer","Putty & Plaster","Polish & Coatings"],"Hardware & Consumables":["Hardware Store","Tools & Equipment","Fasteners & Misc"],"Site & Overheads":["Transport & Freight","Site Utilities","Municipal / Approvals","Tea, Food & Site Misc"],"Finance & Debt":["Home / Term Loan EMI","Credit Card Payment","SIP / Recurring Investment","Investment Transfer","Insurance / MIP","Bank Charges"],"Household & Personal":["Groceries & Food","Utilities & Recharge","Medical","Subscriptions","Donation & Religious","Personal Transfer"],"Transfers & Income":["Internal Sweep / FD","Income Received","Interest Earned","Reimbursement Paid","Refund / Reversal","Self Transfer"],"Unclassified":["Needs Review"]},"excludedCats":["Finance & Debt","Household & Personal","Transfers & Income"],"txns":[{"id":0,"date":"2026-07-29","vendor":"Nanji Ram","raw":"UPI/NANJI RAM/BARB/657606808716/Paid via CRE","ref":"UPI-621013567409","amount":-3700.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":1,"date":"2026-07-29","vendor":"Nadiya Dhaval","raw":"UPI/Nadiya Dhaval /SBIN/657631816844/Paid via CRE","ref":"UPI-621012540010","amount":-2470.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":2,"date":"2026-07-29","vendor":"Sanjay Thakor","raw":"UPI/SANJAY THAKOR/BKID/657610807190/Paid via CRE","ref":"UPI-621003445437","amount":-250.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":3,"date":"2026-07-28","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":43.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":4,"date":"2026-07-28","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":5000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":5,"date":"2026-07-28","vendor":"Rajpurohit (Granite)","raw":"UPI/RAJPUROHIT GAU/SBIN/657508654772/Paid via CRE","ref":"UPI-620935941651","amount":-2400.0,"cat":"Stone, Tile & Flooring","sub":"Granite & Marble","conf":"confirmed","note":""},{"id":6,"date":"2026-07-28","vendor":"Patel Hellyben","raw":"UPI/PATEL HELLYBEN/KKBK/657512656287/Paid via CRE","ref":"UPI-620934168014","amount":-1750.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":7,"date":"2026-07-27","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":512.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":8,"date":"2026-07-27","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":60000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":9,"date":"2026-07-27","vendor":"Kiran Devi","raw":"UPI/Kiran  Devi/SBIN/657418609376/Paid via CRE","ref":"UPI-620805181205","amount":-20000.0,"cat":"Labour & Contractors","sub":"Painting Contractor","conf":"confirmed","note":""},{"id":10,"date":"2026-07-27","vendor":"Kachhad Jitubhai","raw":"UPI/Kachhad Jitubh/IDFB/657416590431/Paid via CRE","ref":"UPI-620897331910","amount":-38000.0,"cat":"Interior & Fit-out","sub":"Furniture & Carpentry","conf":"confirmed","note":""},{"id":11,"date":"2026-07-27","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/657419676020/RecurringTxn","ref":"UPI-620852547494","amount":-1250.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":12,"date":"2026-07-27","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/657419657097/RecurringTxn","ref":"UPI-620852540069","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":13,"date":"2026-07-26","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":84.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":14,"date":"2026-07-26","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":10000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":15,"date":"2026-07-26","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBH/BARB/657304433681/Paid via CRE","ref":"UPI-620723160957","amount":-10000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":16,"date":"2026-07-25","vendor":"Akshar Gruh Udhyog","raw":"UPI/Akshar Gruh Ud/INDB/657223317702/Paid via CRE","ref":"UPI-620667029726","amount":-70.0,"cat":"Hardware & Consumables","sub":"Fasteners & Misc","conf":"inferred","note":""},{"id":17,"date":"2026-07-25","vendor":"Shubham Chaurasia","raw":"UPI/SHUBHAM CHAURA/BARB/657215314034/Paid via CRE","ref":"UPI-620666366349","amount":-160.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":18,"date":"2026-07-22","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":81.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":19,"date":"2026-07-22","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":10000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":20,"date":"2026-07-22","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBH/BARB/656928871890/Paid via CRE","ref":"UPI-620359962537","amount":-10000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":21,"date":"2026-07-22","vendor":"Shree Momai Cement","raw":"UPI/SHREE MOMAI CE/UTIB/656917842347/Paid via CRE","ref":"UPI-620334027246","amount":-2240.0,"cat":"Structural Material","sub":"Cement","conf":"confirmed","note":""},{"id":22,"date":"2026-07-21","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":80.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":23,"date":"2026-07-21","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":10000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":24,"date":"2026-07-21","vendor":"Rajpurohit (Granite)","raw":"UPI/RAJPUROHIT MAH/SBIN/656814718662/Paid via CRE","ref":"UPI-620275841156","amount":-6391.0,"cat":"Stone, Tile & Flooring","sub":"Granite & Marble","conf":"confirmed","note":""},{"id":25,"date":"2026-07-20","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":39.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":26,"date":"2026-07-20","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":5000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":27,"date":"2026-07-20","vendor":"Rajpurohit (Granite)","raw":"UPI/RAJPUROHIT GAU/SBIN/656706578307/Paid via CRE","ref":"UPI-620106662624","amount":-5000.0,"cat":"Stone, Tile & Flooring","sub":"Granite & Marble","conf":"confirmed","note":""},{"id":28,"date":"2026-07-20","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/656790903780/RecurringTxn","ref":"UPI-620193664230","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":29,"date":"2026-07-20","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/656790807478/RecurringTxn","ref":"UPI-620193612403","amount":-1250.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":30,"date":"2026-07-19","vendor":"Dhanlaxmi Sales","raw":"UPI/DHANLAXMI SALE/UTIB/656608422248/Paid via CRE","ref":"UPI-620032693564","amount":-80.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":31,"date":"2026-07-18","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":192.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":32,"date":"2026-07-18","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":25000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":33,"date":"2026-07-18","vendor":"Desai Mohan","raw":"UPI/DESAI MOHAN KO/KKBK/656530382286/Paid via CRE","ref":"UPI-619913826025","amount":-1250.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":34,"date":"2026-07-18","vendor":"Maya LED Light","raw":"UPI/MAYA LED LIGHT/HDFC/656504394088/Paid via CRE","ref":"UPI-619913402508","amount":-10800.0,"cat":"Electrical & Lighting","sub":"Lighting & Fixtures","conf":"confirmed","note":""},{"id":35,"date":"2026-07-18","vendor":"Shaikh Mohammed","raw":"UPI/SHAIKH MOHAMME/KKBK/656518382848/Paid via CRE","ref":"UPI-619906078730","amount":-10000.0,"cat":"Electrical & Lighting","sub":"Switches & Panels","conf":"confirmed","note":""},{"id":36,"date":"2026-07-17","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":417.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":37,"date":"2026-07-17","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":55000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":38,"date":"2026-07-17","vendor":"Kiran Devi","raw":"UPI/Kiran  Devi/SBIN/656423219181/Paid via CRE","ref":"UPI-619828742070","amount":-20000.0,"cat":"Labour & Contractors","sub":"Painting Contractor","conf":"confirmed","note":""},{"id":39,"date":"2026-07-17","vendor":"Sanjay Singhal","raw":"UPI/Sanjay Singhal/AUBL/656410212954/Paid via CRE","ref":"UPI-619823108756","amount":-25000.0,"cat":"Transfers & Income","sub":"Reimbursement Paid","conf":"review","note":""},{"id":40,"date":"2026-07-17","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBH/BARB/656421156784/Paid via CRE","ref":"UPI-619801071485","amount":-10000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":41,"date":"2026-07-16","vendor":"Gami Nayan Giri","raw":"UPI/GAMI NAYAN GIR/KKBK/656324089726/Paid via CRE","ref":"UPI-619763302095","amount":-242.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":42,"date":"2026-07-13","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":144.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":43,"date":"2026-07-13","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":20000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":44,"date":"2026-07-13","vendor":"Jethu Lal","raw":"UPI/Jethu Lal/BARB/656007658748/Paid via CRE","ref":"UPI-619450158907","amount":-60.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":45,"date":"2026-07-13","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBH/BARB/656019636997/Paid via CRE","ref":"UPI-619437397606","amount":-10000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":46,"date":"2026-07-13","vendor":"CRED (Credit Card)","raw":"UPI/CRED Club/UTIB/656029642130/payment on C","ref":"UPI-619433135424","amount":-5155.44,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":47,"date":"2026-07-13","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/619461955999/RecurringTxn","ref":"UPI-619409297158","amount":-1250.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":48,"date":"2026-07-13","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/619461867275/RecurringTxn","ref":"UPI-619409256295","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":49,"date":"2026-07-12","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":142.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":50,"date":"2026-07-12","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":20000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":51,"date":"2026-07-12","vendor":"Kiran Devi","raw":"UPI/Kiran  Devi/SBIN/655901531609/Paid via CRE","ref":"UPI-619377172719","amount":-21000.0,"cat":"Labour & Contractors","sub":"Painting Contractor","conf":"confirmed","note":""},{"id":52,"date":"2026-07-11","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5311550378","ref":"5311550378TO","amount":8.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":53,"date":"2026-07-11","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5311550378","ref":"","amount":10000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":54,"date":"2026-07-11","vendor":"Arunkumar Ramshankar","raw":"UPI/ARUNKUMAR RAMSH/619206299690/PaidViaKotakApp","ref":"UPI-619269395508","amount":-10000.0,"cat":"Labour & Contractors","sub":"False Ceiling Contractor","conf":"confirmed","note":""},{"id":55,"date":"2026-07-10","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5311550378","ref":"5311550378TO","amount":10.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":56,"date":"2026-07-10","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5311550378","ref":"","amount":15000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":57,"date":"2026-07-10","vendor":"Shiv Traders","raw":"UPI/Shiv Traders 2/YESB/655700258259/Paid via CRE","ref":"UPI-619159753561","amount":-45.0,"cat":"Hardware & Consumables","sub":"Hardware Store","conf":"inferred","note":""},{"id":58,"date":"2026-07-10","vendor":"Akshar Gruh Udhyog","raw":"UPI/Akshar Gruh Ud/INDB/655728256227/Paid via CRE","ref":"UPI-619159338868","amount":-510.0,"cat":"Hardware & Consumables","sub":"Fasteners & Misc","conf":"inferred","note":""},{"id":59,"date":"2026-07-10","vendor":"Dumaniya Hardware","raw":"UPI/dumAniya Hardi/INDB/655728177784/Paid via CRE","ref":"UPI-619121613014","amount":-200.0,"cat":"Hardware & Consumables","sub":"Hardware Store","conf":"confirmed","note":""},{"id":60,"date":"2026-07-10","vendor":"Bank of Baroda (Loan EMI)","raw":"NACH-10-DR-BOB LOAN COLLECTION-240789999901000325","ref":"NACHDB10072600833588","amount":-15509.0,"cat":"Finance & Debt","sub":"Home / Term Loan EMI","conf":"confirmed","note":""},{"id":61,"date":"2026-07-09","vendor":"Jethu Lal","raw":"UPI/Jethu Lal/BARB/655618095018/Paid via CRE","ref":"UPI-619070408978","amount":-60.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":62,"date":"2026-07-07","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5311550378","ref":"","amount":10000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":63,"date":"2026-07-07","vendor":"Patel Jay Mahendrabhai","raw":"UPI/PATEL JAY MAHE/PUNB/655427779901/Paid via CRE","ref":"UPI-618821410607","amount":-11000.0,"cat":"Stone, Tile & Flooring","sub":"Granite & Marble","conf":"confirmed","note":""},{"id":64,"date":"2026-07-07","vendor":"Dalpatbhai Dom","raw":"UPI/DALPATBHAI DOM/SBIN/655429735388/Paid via CRE","ref":"UPI-618803554180","amount":-400.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":65,"date":"2026-07-06","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBH/BARB/655307622521/Paid via CRE","ref":"UPI-618758593636","amount":-10000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":66,"date":"2026-07-06","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/655329316029/RecurringTxn","ref":"UPI-618721706960","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":67,"date":"2026-07-04","vendor":"Rajput Surjitsingh","raw":"UPI/RAJPUT SURJITS/UTIB/655119262117/Paid via CRE","ref":"UPI-618503099963","amount":-2000.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":68,"date":"2026-07-04","vendor":"Velocify Digital Solutions LLP","raw":"MB:RECEIVED FROM VELOCIFY DIGITAL SOLUTIONS LLP/TG","ref":"MB-998332533864","amount":21200.0,"cat":"Transfers & Income","sub":"Income Received","conf":"confirmed","note":""},{"id":69,"date":"2026-07-04","vendor":"CRED (Credit Card)","raw":"UPI/CRED Club/UTIB/655131254284/payment on C","ref":"UPI-618592952867","amount":-7862.0,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":70,"date":"2026-07-04","vendor":"CRED (Credit Card)","raw":"UPI/CRED Club/UTIB/655121249634/payment on C","ref":"UPI-618592932121","amount":-3291.81,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":71,"date":"2026-07-04","vendor":"CRED (Credit Card)","raw":"UPI/CRED Club/UTIB/655116257665/payment on C","ref":"UPI-618592903635","amount":-2357.52,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":72,"date":"2026-07-04","vendor":"Bharat Singh","raw":"UPI/Bharat  Singh/SBIN/655131244772/Paid via CRE","ref":"UPI-618589454309","amount":-7625.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":73,"date":"2026-07-04","vendor":"Raise Securities","raw":"NEFT IN22618545685404 RAISE SECURITIES PRIVATE LI","ref":"NEFTINW-1638989328","amount":16347.75,"cat":"Finance & Debt","sub":"Investment Transfer","conf":"confirmed","note":""},{"id":74,"date":"2026-07-03","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5311550378","ref":"","amount":30000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":75,"date":"2026-07-03","vendor":"L&T Finance (Loan EMI)","raw":"NACH-10-DR-L&TFINANCELTD-H02LP260306213836 G69002","ref":"NACHDB03072601604783","amount":-21133.0,"cat":"Finance & Debt","sub":"Home / Term Loan EMI","conf":"confirmed","note":""},{"id":76,"date":"2026-07-03","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBH/BARB/655014067501/Paid via CRE","ref":"UPI-618415425323","amount":-20000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":77,"date":"2026-07-02","vendor":"CRED (Credit Card)","raw":"UPI/CRED Club/UTIB/654931045752/payment on C","ref":"UPI-618301119177","amount":-13464.0,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":78,"date":"2026-07-02","vendor":"Bajaj Finance (Loan EMI)","raw":"DIRECT DEBIT-DR-BAJAJ FINANCE LTD-418SPFGL936074","ref":"NACHDD02072600290876","amount":-1106.0,"cat":"Finance & Debt","sub":"Home / Term Loan EMI","conf":"confirmed","note":""},{"id":79,"date":"2026-07-01","vendor":"Sweep Transfer (out)","raw":"SWEEP TRANSFER TO [5311550378]","ref":"","amount":-65000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":80,"date":"2026-07-01","vendor":"Velocify Digital Solutions LLP","raw":"MB:RECEIVED FROM VELOCIFY DIGITAL SOLUTIONS LLP/JU","ref":"MB-998333333831","amount":100000.0,"cat":"Transfers & Income","sub":"Income Received","conf":"confirmed","note":""},{"id":81,"date":"2026-07-01","vendor":"Puja Mukeshbha","raw":"UPI/PUJA MUKESHBHA/UJVN/654831740156/Paid via CRE","ref":"UPI-618270356954","amount":-100.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":82,"date":"2026-07-01","vendor":"Dhanlaxmi Sales","raw":"UPI/DHANLAXMI SALE/UTIB/654809731623/Paid via CRE","ref":"UPI-618270203638","amount":-340.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":83,"date":"2026-07-01","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/618228026603/RecurringTxn","ref":"UPI-618256593294","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":84,"date":"2026-07-01","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/618228024486/RecurringTxn","ref":"UPI-618256590234","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":85,"date":"2026-07-01","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/618227928959/RecurringTxn","ref":"UPI-618256543677","amount":-5000.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":86,"date":"2026-06-30","vendor":"Bank Interest Paid","raw":"Int.Pd:1614263140:01-04-2026 to 30-06-2026","ref":"","amount":198.0,"cat":"Transfers & Income","sub":"Interest Earned","conf":"confirmed","note":""},{"id":87,"date":"2026-06-30","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":208.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":88,"date":"2026-06-30","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":35000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":89,"date":"2026-06-30","vendor":"Indravadan Kan","raw":"UPI/INDRAVADAN KAN/SBIN/654713625784/Paid via CRE","ref":"UPI-618129361540","amount":-50.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":90,"date":"2026-06-30","vendor":"Sanjay Singhal","raw":"UPI/Sanjay Singhal/AUBL/654711629901/Paid via CRE","ref":"UPI-618126026733","amount":-10000.0,"cat":"Transfers & Income","sub":"Reimbursement Paid","conf":"review","note":""},{"id":91,"date":"2026-06-30","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBH/BARB/654712613888/Paid via CRE","ref":"UPI-618124094066","amount":-10000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":92,"date":"2026-06-30","vendor":"Chauhan Pinta","raw":"UPI/CHAUHAN PINTA /KKBK/654713589203/Paid via CRE","ref":"UPI-618114764059","amount":-6700.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":93,"date":"2026-06-30","vendor":"Satguru Stone","raw":"UPI/SATGURU STONE /KKBK/654706556374/Paid via CRE","ref":"UPI-618103882783","amount":-700.0,"cat":"Stone, Tile & Flooring","sub":"Kota / Stone Slabs","conf":"confirmed","note":""},{"id":94,"date":"2026-06-30","vendor":"Phulwaria Nand","raw":"UPI/PHULWARIA NAND/UTIB/654728548028/Paid via CRE","ref":"UPI-618103000344","amount":-5785.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":95,"date":"2026-06-29","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":58.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":96,"date":"2026-06-29","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":10000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":97,"date":"2026-06-29","vendor":"Arunkumar Ramshankar","raw":"UPI/ARUNKUMAR RAMS/BARB/654616486453/Paid via CRE","ref":"UPI-618067861341","amount":-10000.0,"cat":"Labour & Contractors","sub":"False Ceiling Contractor","conf":"confirmed","note":""},{"id":98,"date":"2026-06-29","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/654691050649/RecurringTxn","ref":"UPI-618021178758","amount":-1250.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":99,"date":"2026-06-29","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/654691010183/RecurringTxn","ref":"UPI-618021160134","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":100,"date":"2026-06-27","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":453.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":101,"date":"2026-06-27","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":80000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":102,"date":"2026-06-27","vendor":"Kachhad Jitubhai","raw":"UPI/Kachhad Jitubh/IDFB/654427138881/Paid via CRE","ref":"UPI-617815492493","amount":-62000.0,"cat":"Interior & Fit-out","sub":"Furniture & Carpentry","conf":"confirmed","note":""},{"id":103,"date":"2026-06-27","vendor":"HP Gas","raw":"UPI/HP Gas Cylinde/YESB/617823544186/Sent using P","ref":"UPI-617801831312","amount":-949.0,"cat":"Household & Personal","sub":"Utilities & Recharge","conf":"confirmed","note":""},{"id":104,"date":"2026-06-27","vendor":"Barot Vijay","raw":"UPI/BAROT VIJAY MA/UTIB/654407083262/Paid via CRE","ref":"UPI-617801334047","amount":-15000.0,"cat":"Labour & Contractors","sub":"Electrical Labour","conf":"confirmed","note":""},{"id":105,"date":"2026-06-26","vendor":"Shailendrakumar","raw":"UPI/SHAILENDRAKUMA/SBIN/654323039164/Paid via CRE","ref":"UPI-617770151315","amount":-1885.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":106,"date":"2026-06-25","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":301.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":107,"date":"2026-06-25","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":55000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":108,"date":"2026-06-25","vendor":"Ashok Parmanand","raw":"UPI/ASHOK PARMANAN/ICIC/654200898747/Paid via CRE","ref":"UPI-617611861433","amount":-13500.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":109,"date":"2026-06-25","vendor":"Bhagirath N.","raw":"UPI/BHAGIRATH N FA/ICIC/654214865586/Paid via CRE","ref":"UPI-617694598342","amount":-20000.0,"cat":"Transfers & Income","sub":"Reimbursement Paid","conf":"review","note":""},{"id":110,"date":"2026-06-25","vendor":"Vijya Rahulbha","raw":"UPI/Vijya Rahulbha/SBIN/654211858731/Paid via CRE","ref":"UPI-617684937031","amount":-100.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":111,"date":"2026-06-25","vendor":"Patel Smit","raw":"UPI/PATEL  SMIT/SBIN/654217840247/Paid via CRE","ref":"UPI-617677142517","amount":-11970.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":112,"date":"2026-06-25","vendor":"Chauhan Pinta","raw":"UPI/CHAUHAN PINTA /KKBK/654204827922/Paid via CRE","ref":"UPI-617672774889","amount":-10400.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":113,"date":"2026-06-24","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":161.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":114,"date":"2026-06-24","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":30000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":115,"date":"2026-06-24","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBH/BARB/654121739553/Paid via CRE","ref":"UPI-617532629459","amount":-20000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":116,"date":"2026-06-24","vendor":"Arunkumar Ramshankar","raw":"UPI/ARUNKUMAR RAMS/BARB/654118697022/Paid via CRE","ref":"UPI-617507226968","amount":-10000.0,"cat":"Labour & Contractors","sub":"False Ceiling Contractor","conf":"confirmed","note":""},{"id":117,"date":"2026-06-23","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":26.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":118,"date":"2026-06-23","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":5000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":119,"date":"2026-06-23","vendor":"Chauhan Sumit","raw":"UPI/CHAUHAN  SUMIT/SBIN/654025547189/Paid via CRE","ref":"UPI-617439501121","amount":-5000.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":120,"date":"2026-06-22","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":259.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":121,"date":"2026-06-22","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":50000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":122,"date":"2026-06-22","vendor":"Avaniben Thomas","raw":"UPI/AVANIBEN THOMA/BARB/653905435660/Paid via CRE","ref":"UPI-617386136739","amount":-13300.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":123,"date":"2026-06-22","vendor":"Mundhava Vijay","raw":"UPI/MUNDHAVA VIJAY/HDFC/653909435484/Paid via CRE","ref":"UPI-617386093364","amount":-9700.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":124,"date":"2026-06-22","vendor":"Rajpurohit (Granite)","raw":"UPI/RAJPUROHIT GAU/SBIN/653918439493/Paid via CRE","ref":"UPI-617381866743","amount":-8450.0,"cat":"Stone, Tile & Flooring","sub":"Granite & Marble","conf":"confirmed","note":""},{"id":125,"date":"2026-06-22","vendor":"Divya P Mishr","raw":"UPI/DIVYA P  MISHR/SBIN/653925414751/Paid via CRE","ref":"UPI-617374468392","amount":-600.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":126,"date":"2026-06-22","vendor":"Chauhan Pinta","raw":"UPI/CHAUHAN PINTA /KKBK/653925406021/Paid via CRE","ref":"UPI-617370635769","amount":-12100.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":127,"date":"2026-06-22","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/617369763093/RecurringTxn","ref":"UPI-617364254332","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":128,"date":"2026-06-22","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/617369733407/RecurringTxn","ref":"UPI-617364230357","amount":-1250.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":129,"date":"2026-06-21","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":127.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":130,"date":"2026-06-21","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":25000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":131,"date":"2026-06-21","vendor":"Vardhman Selection","raw":"UPI/Vardhman Selec/YESB/653831359716/Paid via CRE","ref":"UPI-617245439807","amount":-280.0,"cat":"Hardware & Consumables","sub":"Fasteners & Misc","conf":"inferred","note":""},{"id":132,"date":"2026-06-21","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBH/BARB/653811333019/Paid via CRE","ref":"UPI-617232172765","amount":-20000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":133,"date":"2026-06-21","vendor":"Himanshu Pratap","raw":"UPI/Himanshu Prata/ICIC/653812256177/Paid via CRE","ref":"UPI-617204717556","amount":-2540.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":134,"date":"2026-06-18","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":24.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":135,"date":"2026-06-18","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":5000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":136,"date":"2026-06-18","vendor":"Kavish Rajendra","raw":"UPI/KAVISH RAJENDR/UTIB/653501934715/Paid via CRE","ref":"UPI-616952260162","amount":-500.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":137,"date":"2026-06-18","vendor":"Ranjitbhai Chauhan","raw":"UPI/RANJITBHAI CHA/ICIC/653515921570/Paid via CRE","ref":"UPI-616943683398","amount":-5000.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":138,"date":"2026-06-18","vendor":"Shyam Hardware","raw":"UPI/Shyam Hardware/UTIB/653518856404/Paid via CRE","ref":"UPI-616912141301","amount":-2800.0,"cat":"Hardware & Consumables","sub":"Hardware Store","conf":"confirmed","note":""},{"id":139,"date":"2026-06-17","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":164.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":140,"date":"2026-06-17","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":35000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":141,"date":"2026-06-17","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBH/BARB/653412771552/Paid via CRE","ref":"UPI-616873546720","amount":-20000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":142,"date":"2026-06-17","vendor":"Patel Jay Mahendrabhai","raw":"UPI/JAY MAHENDRABH/MSNU/653415720706/Paid via CRE","ref":"UPI-616843285939","amount":-15800.0,"cat":"Stone, Tile & Flooring","sub":"Granite & Marble","conf":"confirmed","note":""},{"id":143,"date":"2026-06-17","vendor":"Satishkumar N.","raw":"UPI/SATISHKUMAR NA/BKID/653422714117/Paid via CRE","ref":"UPI-616839020425","amount":-148.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":144,"date":"2026-06-16","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":46.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":145,"date":"2026-06-16","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":10000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":146,"date":"2026-06-16","vendor":"Chauhan Pinta","raw":"UPI/CHAUHAN PINTA /KKBK/653314633375/Paid via CRE","ref":"UPI-616705483467","amount":-6600.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":147,"date":"2026-06-15","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":135.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":148,"date":"2026-06-15","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":30000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":149,"date":"2026-06-15","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBH/BARB/653223483564/Paid via CRE","ref":"UPI-616624945698","amount":-20000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":150,"date":"2026-06-15","vendor":"Dalwala Jignesh","raw":"UPI/Dalwala Jignas/SBIN/653223445864/Paid via CRE","ref":"UPI-616605231509","amount":-6300.0,"cat":"Structural Material","sub":"Cement","conf":"confirmed","note":""},{"id":151,"date":"2026-06-15","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/653242398978/RecurringTxn","ref":"UPI-616688270961","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":152,"date":"2026-06-15","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearin/HDFC/653242397474/RecurringTxn","ref":"UPI-616688270391","amount":-1250.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":153,"date":"2026-06-13","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":74.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":154,"date":"2026-06-13","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":20000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":155,"date":"2026-06-13","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBHA/653015122119/Paid via CRED","ref":"UPI-616456771703","amount":-20000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":156,"date":"2026-06-12","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":54.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":157,"date":"2026-06-12","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":15000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":158,"date":"2026-06-12","vendor":"CRED (Credit Card)","raw":"UPI/CRED Store/652931060502/Payment","ref":"UPI-616329374552","amount":-1049.0,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":159,"date":"2026-06-12","vendor":"Dalwala Jignesh","raw":"UPI/Dalwala Jignash/652929976713/Paid via CRED","ref":"UPI-616392083154","amount":-18000.0,"cat":"Structural Material","sub":"Cement","conf":"confirmed","note":""},{"id":160,"date":"2026-06-11","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":35.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":161,"date":"2026-06-11","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":10000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":162,"date":"2026-06-11","vendor":"Manubhai Rayabhai","raw":"UPI/MANUBHAI RAYABH/652830879139/Paid via CRED","ref":"UPI-616245955491","amount":-9500.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":163,"date":"2026-06-10","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":121.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":164,"date":"2026-06-10","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":35000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":165,"date":"2026-06-10","vendor":"Jethu Lal","raw":"UPI/Jethu Lal/652716767119/Paid via CRED","ref":"UPI-616184260297","amount":-60.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":166,"date":"2026-06-10","vendor":"Dilipkumar Mahendra","raw":"UPI/DILIPKUMAR MAHE/652714713041/Paid via CRED","ref":"UPI-616164197814","amount":-3500.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":167,"date":"2026-06-10","vendor":"CRED (Credit Card)","raw":"UPI/CRED/652718725179/payment on CRED","ref":"UPI-616164156416","amount":-15630.0,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":168,"date":"2026-06-10","vendor":"Bank of Baroda (Loan EMI)","raw":"NACH-10-DR-BOB LOAN COLLECTION-240789999901000325","ref":"NACHDB10062600635195","amount":-15509.0,"cat":"Finance & Debt","sub":"Home / Term Loan EMI","conf":"confirmed","note":""},{"id":169,"date":"2026-06-09","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":67.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":170,"date":"2026-06-09","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":20000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":171,"date":"2026-06-09","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBHA/652602593918/Paid via CRED","ref":"UPI-616005983705","amount":-20000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":172,"date":"2026-06-09","vendor":"Nitaben Bhikhabhai","raw":"UPI/Nitaben Bhikhab/652617543525/Paid via CRED","ref":"UPI-616077499230","amount":-1080.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":173,"date":"2026-06-08","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":148.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":174,"date":"2026-06-08","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":45000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":175,"date":"2026-06-08","vendor":"Patel Smit","raw":"UPI/Patel Smit/652530419397/Paid via CRED","ref":"UPI-615924312616","amount":-14421.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":176,"date":"2026-06-08","vendor":"Nasit Bhikhubhai","raw":"UPI/MR NASIT BHIKHU/652521410366/Paid via CRED","ref":"UPI-615918849252","amount":-7710.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":177,"date":"2026-06-08","vendor":"CRED (Credit Card)","raw":"UPI/CRED Club/652500400788/payment on CRED","ref":"UPI-615918809784","amount":-7498.28,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":178,"date":"2026-06-08","vendor":"CRED (Credit Card)","raw":"UPI/CRED Club/652507396521/payment on CRED","ref":"UPI-615918771357","amount":-8100.0,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":179,"date":"2026-06-08","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/615920761884/RecurringTxn","ref":"UPI-615998797503","amount":-1250.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":180,"date":"2026-06-08","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/615920742874/RecurringTxn","ref":"UPI-615998763166","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":181,"date":"2026-06-06","vendor":"Nanhi Kumari","raw":"UPI/Mrs NANHI  KUMA/652305065508/Paid via CRED","ref":"UPI-615775830652","amount":-385.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":182,"date":"2026-06-05","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":61.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":183,"date":"2026-06-05","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":20000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":184,"date":"2026-06-05","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBHA/652231958435/Paid via CRED","ref":"UPI-615626077822","amount":-20000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":185,"date":"2026-06-05","vendor":"Astha Medicines","raw":"UPI/Astha Medicines/652207881617/Paid via CRED","ref":"UPI-615699827686","amount":-60.0,"cat":"Household & Personal","sub":"Medical","conf":"confirmed","note":""},{"id":186,"date":"2026-06-05","vendor":"CRED (Credit Card)","raw":"UPI/CRED Club/652202880047/payment on CRED","ref":"UPI-615694028344","amount":-1603.0,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":187,"date":"2026-06-04","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":59.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":188,"date":"2026-06-04","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":20000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":189,"date":"2026-06-04","vendor":"Mahendra Singh","raw":"UPI/Mahendra Singh/652115752096/Paid via CRED","ref":"UPI-615532624754","amount":-3220.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":190,"date":"2026-06-04","vendor":"Mahendra Singh","raw":"UPI/Mahendra Singh/652121739911/Paid via CRED","ref":"UPI-615531668930","amount":-14680.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":191,"date":"2026-06-03","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":29.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":192,"date":"2026-06-03","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":10000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":193,"date":"2026-06-03","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5319730825","ref":"","amount":55000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":194,"date":"2026-06-03","vendor":"Momin Atharali","raw":"UPI/MOMIN ATHARALI /652023649948/Paid via CRED","ref":"UPI-615490499135","amount":-18000.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":195,"date":"2026-06-03","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBHA/652014612476/Paid via CRED","ref":"UPI-615479399723","amount":-30000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":196,"date":"2026-06-03","vendor":"L&T Finance (Loan EMI)","raw":"NACH-10-DR-L&TFINANCELTD-H02LP260306213836 G69002","ref":"NACHDB03062600736287","amount":-21133.0,"cat":"Finance & Debt","sub":"Home / Term Loan EMI","conf":"confirmed","note":""},{"id":197,"date":"2026-06-02","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5319730825","ref":"","amount":10000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":198,"date":"2026-06-02","vendor":"Mahendra Singh","raw":"UPI/Mahendra Singh/651929439964/Paid via CRED","ref":"UPI-615304687834","amount":-3000.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":199,"date":"2026-06-02","vendor":"CRED (Credit Card)","raw":"UPI/CRED Club/651900396235/payment on CRED","ref":"UPI-615389312973","amount":-22753.0,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":200,"date":"2026-06-02","vendor":"Krishana Kumar","raw":"UPI/Krishana  Kumar/651915413760/Paid via CRED","ref":"UPI-615388330562","amount":-2000.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":201,"date":"2026-06-02","vendor":"CRED (Credit Card)","raw":"UPI/CRED Club/651924408988/payment on CRED","ref":"UPI-615388297451","amount":-2099.28,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":202,"date":"2026-06-02","vendor":"Bajaj Finance (Loan EMI)","raw":"DIRECT DEBIT-DR-BAJAJ FINANCE LTD-418SPFGL936074","ref":"NACHDD02062600593363","amount":-1106.0,"cat":"Finance & Debt","sub":"Home / Term Loan EMI","conf":"confirmed","note":""},{"id":203,"date":"2026-06-02","vendor":"DivineCast","raw":"UPI/DivineCast/615359517954/DivineCastKunda","ref":"UPI-615377162847","amount":-99.0,"cat":"Household & Personal","sub":"Donation & Religious","conf":"inferred","note":""},{"id":204,"date":"2026-06-01","vendor":"Sweep Transfer (out)","raw":"SWEEP TRANSFER TO [5319730825]","ref":"","amount":-65000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":205,"date":"2026-06-01","vendor":"Suruchi Foods","raw":"UPI/Suruchi Foods/651809319466/Paid via CRED","ref":"UPI-615252004325","amount":-150.0,"cat":"Household & Personal","sub":"Groceries & Food","conf":"confirmed","note":""},{"id":206,"date":"2026-06-01","vendor":"Velocify Digital Solutions LLP","raw":"MB:RECEIVED FROM VELOCIFY DIGITAL SOLUTIONS LLP/MA","ref":"MB-998341446834","amount":100000.0,"cat":"Transfers & Income","sub":"Income Received","conf":"confirmed","note":""},{"id":207,"date":"2026-06-01","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/615287787680/RecurringTxn","ref":"UPI-615295039579","amount":-1250.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":208,"date":"2026-06-01","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/615287661404/RecurringTxn","ref":"UPI-615294945873","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":209,"date":"2026-06-01","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/615285912955/RecurringTxn","ref":"UPI-615294376477","amount":-5000.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":210,"date":"2026-06-01","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/615285716084/RecurringTxn","ref":"UPI-615294329325","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":211,"date":"2026-06-01","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/615285686084/RecurringTxn","ref":"UPI-615294323027","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":212,"date":"2026-05-31","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":13.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":213,"date":"2026-05-31","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":5000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":214,"date":"2026-05-31","vendor":"Airtel","raw":"UPI/Airtel/615157243636/Airtel DTH Rech","ref":"UPI-615172723904","amount":-300.0,"cat":"Household & Personal","sub":"Utilities & Recharge","conf":"confirmed","note":""},{"id":215,"date":"2026-05-29","vendor":"Shailendrakumar","raw":"UPI/SHAILENDRAKUMAR/651523682454/Paid via CRED","ref":"UPI-614904028616","amount":-1430.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":216,"date":"2026-05-28","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":98.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":217,"date":"2026-05-28","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":45000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":218,"date":"2026-05-28","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBHA/651419589845/Paid via CRED","ref":"UPI-614872688908","amount":-20000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":219,"date":"2026-05-28","vendor":"Dalwala Jignesh","raw":"UPI/Dalwala Jignash/651401522152/Paid via CRED","ref":"UPI-614839593148","amount":-17350.0,"cat":"Structural Material","sub":"Cement","conf":"confirmed","note":""},{"id":220,"date":"2026-05-28","vendor":"Momin Atharali","raw":"UPI/MOMIN ATHARALI /651416531341/Paid via CRED","ref":"UPI-614839561989","amount":-9000.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":221,"date":"2026-05-27","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":21.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":222,"date":"2026-05-27","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":10000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":223,"date":"2026-05-27","vendor":"Momin Atharali","raw":"UPI/MOMIN ATHARALI /651327407450/Paid via CRED","ref":"UPI-614781850238","amount":-9500.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":224,"date":"2026-05-25","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":49.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":225,"date":"2026-05-25","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":25000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":226,"date":"2026-05-25","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBHA/651121157060/Paid via CRED","ref":"UPI-614566222297","amount":-20000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":227,"date":"2026-05-25","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/651165221943/RecurringTxn","ref":"UPI-614531995491","amount":-1250.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":228,"date":"2026-05-25","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/651165072932/RecurringTxn","ref":"UPI-614531936658","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":229,"date":"2026-05-24","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":19.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":230,"date":"2026-05-24","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":10000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":231,"date":"2026-05-24","vendor":"Barot Vijay","raw":"UPI/BAROT VIJAY MAT/651004030136/Paid via CRED","ref":"UPI-614405964894","amount":-5000.0,"cat":"Labour & Contractors","sub":"Electrical Labour","conf":"confirmed","note":""},{"id":232,"date":"2026-05-24","vendor":"Bharatbhai Kali","raw":"UPI/BHARATBHAI KALI/651015966943/Paid via CRED","ref":"UPI-614477747071","amount":-376.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":233,"date":"2026-05-24","vendor":"Hari Shankar","raw":"UPI/Mr HARI SHANKAR/651019935921/Paid via CRED","ref":"UPI-614474414954","amount":-6000.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":234,"date":"2026-05-23","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":18.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":235,"date":"2026-05-23","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":10000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":236,"date":"2026-05-23","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBHA/650930823657/Paid via CRED","ref":"UPI-614321210247","amount":-10000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":237,"date":"2026-05-23","vendor":"Rehana Khatun","raw":"UPI/REHANA  KHATUN/650904829834/Paid via CRED","ref":"UPI-614319490364","amount":-99.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":238,"date":"2026-05-23","vendor":"Patel Kasmiraben","raw":"UPI/PATEL  KASMIRAB/650902797330/Paid via CRED","ref":"UPI-614309695024","amount":-1220.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":239,"date":"2026-05-22","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":69.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":240,"date":"2026-05-22","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":40000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":241,"date":"2026-05-22","vendor":"Govind Mafatlal","raw":"UPI/GOVIND MAFATLAL/650828749757/Paid via CRED","ref":"UPI-614292167722","amount":-18000.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":242,"date":"2026-05-22","vendor":"Apple Media Services","raw":"UPI/APPLE MEDIA SER/103336282382/Execution test","ref":"UPI-614274432673","amount":-299.0,"cat":"Household & Personal","sub":"Subscriptions","conf":"confirmed","note":""},{"id":243,"date":"2026-05-22","vendor":"Smit Himanshubhai","raw":"UPI/SMIT HIMANSHUBH/650816704157/cement","ref":"UPI-614263321042","amount":-20300.0,"cat":"Structural Material","sub":"Cement","conf":"confirmed","note":""},{"id":244,"date":"2026-05-20","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":40.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":245,"date":"2026-05-20","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":25000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":246,"date":"2026-05-20","vendor":"Devashree Steel","raw":"UPI/DEVASHREE STEEL/650602450181/Paid via CRED","ref":"UPI-614049678625","amount":-2770.0,"cat":"Structural Material","sub":"Steel / TMT Bars","conf":"confirmed","note":""},{"id":247,"date":"2026-05-20","vendor":"Pasvan Pradip","raw":"UPI/PASVAN PRADIP/650626431533/Paid via CRED","ref":"UPI-614044726230","amount":-1700.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":248,"date":"2026-05-20","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBHA/650625408385/Paid via CRED","ref":"UPI-614030897450","amount":-20000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":249,"date":"2026-05-19","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":75.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":250,"date":"2026-05-19","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":50000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":251,"date":"2026-05-19","vendor":"Jethu Lal","raw":"UPI/Jethu Lal/650525283458/Paid via CRED","ref":"UPI-613971726128","amount":-60.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":252,"date":"2026-05-19","vendor":"Raise Securities","raw":"UPI/Raise Securitie/613970770051/PayviaRazorpay","ref":"UPI-613951521230","amount":-50000.0,"cat":"Finance & Debt","sub":"Investment Transfer","conf":"confirmed","note":""},{"id":253,"date":"2026-05-18","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":7.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":254,"date":"2026-05-18","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":5000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":255,"date":"2026-05-18","vendor":"Jio","raw":"UPI/Jio/613869416448/Sent using Payt","ref":"UPI-613884992415","amount":-19.0,"cat":"Household & Personal","sub":"Utilities & Recharge","conf":"confirmed","note":""},{"id":256,"date":"2026-05-18","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/613840738374/RecurringTxn","ref":"UPI-613861488117","amount":-1250.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":257,"date":"2026-05-18","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/613840732700/RecurringTxn","ref":"UPI-613861482344","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":258,"date":"2026-05-16","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511(Value Date: 16-05-2026)","ref":"5317785511TO","amount":26.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":259,"date":"2026-05-16","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511(Value Date: 16-05-2026)","ref":"","amount":20000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":260,"date":"2026-05-17","vendor":"Krishana Kumar","raw":"UPI/Krishana  Kumar/650305947031/Paid via CRED","ref":"UPI-613719566222","amount":-800.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":261,"date":"2026-05-17","vendor":"Patel Jay Mahendrabhai","raw":"UPI/PATEL JAY MAHEN/650329949845/Paid via CRED","ref":"UPI-613718412959","amount":-29.0,"cat":"Stone, Tile & Flooring","sub":"Granite & Marble","conf":"confirmed","note":""},{"id":262,"date":"2026-05-17","vendor":"Patel Jay Mahendrabhai","raw":"UPI/PATEL JAY MAHEN/650329932818/Paid via CRED","ref":"UPI-613711090596","amount":-20.0,"cat":"Stone, Tile & Flooring","sub":"Granite & Marble","conf":"confirmed","note":""},{"id":263,"date":"2026-05-17","vendor":"Patel Jay Mahendrabhai","raw":"UPI/PATEL JAY MAHEN/650325938210/Paid via CRED","ref":"UPI-613711054970","amount":-279.0,"cat":"Stone, Tile & Flooring","sub":"Granite & Marble","conf":"confirmed","note":""},{"id":264,"date":"2026-05-16","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":6.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":265,"date":"2026-05-16","vendor":"Vikaskumar Mahe","raw":"UPI/VIKASKUMAR MAHE/650205877805/Paid via CRED","ref":"UPI-613689670942","amount":-150.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":266,"date":"2026-05-16","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBHA/650225888342/Paid via CRED","ref":"UPI-613689203348","amount":-20000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":267,"date":"2026-05-16","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":5000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":268,"date":"2026-05-16","vendor":"Bhikhubhai Vitthal","raw":"UPI/BHIKHUBHAI VITH/650221770506/Paid via CRED","ref":"UPI-613639385162","amount":-7500.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":269,"date":"2026-05-15","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":12.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":270,"date":"2026-05-15","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":10000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":271,"date":"2026-05-15","vendor":"CRED (Credit Card)","raw":"UPI/CRED Club/650119643387/payment on CRED","ref":"UPI-613589177463","amount":-1023.0,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":272,"date":"2026-05-15","vendor":"Babulal Punmaram","raw":"UPI/Mr BABULAL PUNM/650104657579/Paid via CRED","ref":"UPI-613584701768","amount":-7300.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":273,"date":"2026-05-14","vendor":"Sorav Rajendra","raw":"UPI/SORAV RAJENDRA /650028541927/Paid via CRED a","ref":"UPI-613438871531","amount":-1010.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":274,"date":"2026-05-14","vendor":"Sorav Rajendra","raw":"UPI/SORAV RAJENDRA /650013548178/Paid via CRED a","ref":"UPI-613437048718","amount":-90.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":275,"date":"2026-05-13","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":63.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":276,"date":"2026-05-13","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":60000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":277,"date":"2026-05-13","vendor":"Shah Kenil (MIP)","raw":"UPI/SHAH KENIL NITI/649913395738/MIP payment","ref":"UPI-613365611921","amount":-50000.0,"cat":"Finance & Debt","sub":"Insurance / MIP","conf":"confirmed","note":""},{"id":278,"date":"2026-05-13","vendor":"Jethu Lal","raw":"UPI/Jethu Lal/649919365481/Paid via CRED","ref":"UPI-613358048581","amount":-30.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":279,"date":"2026-05-13","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBHA/649901361644/Paid via CRED","ref":"UPI-613349690723","amount":-10000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":280,"date":"2026-05-13","vendor":"Lilesh Ishwarbhai","raw":"UPI/LILESH ISHWARBH/649916340251/Paid via CRED","ref":"UPI-613335445422","amount":-1000.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":281,"date":"2026-05-12","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":10.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":282,"date":"2026-05-12","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":10000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":283,"date":"2026-05-12","vendor":"Makvana Jayeshk","raw":"UPI/MAKVANA JAYESHK/649824220922/Paid via CRED","ref":"UPI-613282806238","amount":-182.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":284,"date":"2026-05-12","vendor":"Lilesh Ishwarbhai","raw":"UPI/LILESH ISHWARBH/649826193651/Paid via CRED","ref":"UPI-613274979621","amount":-1000.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":285,"date":"2026-05-12","vendor":"Bhatti Parulben","raw":"UPI/BHATTI PARULBEN/649818204676/Paid via CRED","ref":"UPI-613272253424","amount":-250.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":286,"date":"2026-05-12","vendor":"Kaushik Dev","raw":"UPI/Mr  KAUSHIK DEV/649816198487/Paid via CRED","ref":"UPI-613269399032","amount":-5600.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":287,"date":"2026-05-11","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":18.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":288,"date":"2026-05-11","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":20000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":289,"date":"2026-05-11","vendor":"Dalwala Jignesh","raw":"UPI/Dalwala Jignash/649707095237/Paid via CRED","ref":"UPI-613129387257","amount":-18000.0,"cat":"Structural Material","sub":"Cement","conf":"confirmed","note":""},{"id":290,"date":"2026-05-11","vendor":"Lilesh Ishwarbhai","raw":"UPI/LILESH ISHWARBH/649704066527/Paid via CRED","ref":"UPI-613108531820","amount":-1000.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":291,"date":"2026-05-11","vendor":"Jio","raw":"UPI/Jio/613169661337/Sent using Payt","ref":"UPI-613189730971","amount":-300.8,"cat":"Household & Personal","sub":"Utilities & Recharge","conf":"confirmed","note":""},{"id":292,"date":"2026-05-11","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/649715804396/RecurringTxn","ref":"UPI-613174442390","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":293,"date":"2026-05-11","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/649715795576/RecurringTxn","ref":"UPI-613174418629","amount":-1250.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":294,"date":"2026-05-10","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":62.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":295,"date":"2026-05-10","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":75000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":296,"date":"2026-05-10","vendor":"Dalwala Jignesh","raw":"UPI/Dalwala Jignash/649600851750/Paid via CRED","ref":"UPI-613021191835","amount":-17000.0,"cat":"Structural Material","sub":"Cement","conf":"confirmed","note":""},{"id":297,"date":"2026-05-10","vendor":"Patel Vandan","raw":"UPI/VANDAN NARESHBH/649607845578/Paid via CRED","ref":"UPI-613020342166","amount":-19358.0,"cat":"Structural Material","sub":"Steel / TMT Bars","conf":"confirmed","note":""},{"id":298,"date":"2026-05-10","vendor":"CRED (Credit Card)","raw":"UPI/CRED Club/649612852015/payment on CRED","ref":"UPI-613020139250","amount":-9869.8,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":299,"date":"2026-05-10","vendor":"CRED (Credit Card)","raw":"UPI/CRED Club/649604864942/payment on CRED","ref":"UPI-613020109718","amount":-10901.0,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":300,"date":"2026-05-10","vendor":"Bank of Baroda (Loan EMI)","raw":"NACH-10-DR-BOB LOAN COLLECTION-240789999901000325","ref":"NACHDB10052600273510","amount":-15509.0,"cat":"Finance & Debt","sub":"Home / Term Loan EMI","conf":"confirmed","note":""},{"id":301,"date":"2026-05-09","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":75.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":302,"date":"2026-05-09","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":100000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":303,"date":"2026-05-09","vendor":"Self Transfer (Nilesh Sahu)","raw":"MB:SENT NEFT NILESH SAHU 029401536092 ICICI BAN","ref":"000530516120","amount":-100000.0,"cat":"Transfers & Income","sub":"Self Transfer","conf":"confirmed","note":""},{"id":304,"date":"2026-05-07","vendor":"FD Premature Proceeds","raw":"FD PREMAT PROCEEDS: 5317785511","ref":"5317785511TO","amount":12.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":305,"date":"2026-05-07","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":20000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":306,"date":"2026-05-07","vendor":"Hari Gopi","raw":"UPI/HARI GOPI/649330436618/Paid via CRED","ref":"UPI-612743657822","amount":-160.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":307,"date":"2026-05-07","vendor":"Jethu Lal","raw":"UPI/Jethu Lal/649319401133/Paid via CRED","ref":"UPI-612733005065","amount":-60.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":308,"date":"2026-05-07","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBHA/649311383114/Paid via CRED","ref":"UPI-612716630594","amount":-20000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":309,"date":"2026-05-05","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":20000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":310,"date":"2026-05-05","vendor":"Patel Laxman","raw":"UPI/PATEL LAXMAN/649111118823/Paid via CRED","ref":"UPI-612504803269","amount":-40.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":311,"date":"2026-05-05","vendor":"Mr Shankar Lal","raw":"UPI/Mr Shankar Lal /649108076599/Paid via CRED","ref":"UPI-612590138477","amount":-90.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":312,"date":"2026-05-05","vendor":"Real Bricks","raw":"UPI/REAL BRICKS/649112969237/Paid via CRED","ref":"UPI-612547389606","amount":-18000.0,"cat":"Structural Material","sub":"Bricks & Blocks","conf":"confirmed","note":""},{"id":313,"date":"2026-05-04","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317785511","ref":"","amount":30000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":314,"date":"2026-05-04","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317950399","ref":"","amount":25000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":315,"date":"2026-05-04","vendor":"Thakor Pratikku","raw":"UPI/Thakor Pratikku/649017956083/Paid via CRED","ref":"UPI-612435669746","amount":-217.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":316,"date":"2026-05-04","vendor":"Gadhvi Mayabe","raw":"UPI/GADHVI   MAYABE/649028908184/Paid via CRED","ref":"UPI-612425138505","amount":-213.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":317,"date":"2026-05-04","vendor":"Vishnubhai Gopa","raw":"UPI/VISHNUBHAI GOPA/649015927379/Paid via CRED","ref":"UPI-612424798573","amount":-60.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":318,"date":"2026-05-04","vendor":"Atul Yadav","raw":"UPI/Atul Yadav/649001919622/Paid via CRED","ref":"UPI-612424198163","amount":-50.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":319,"date":"2026-05-04","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBHA/649029900749/Paid via CRED","ref":"UPI-612417558445","amount":-20000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":320,"date":"2026-05-04","vendor":"CRED (Credit Card)","raw":"UPI/CRED Club/649006884240/payment on CRED","ref":"UPI-612410916195","amount":-1180.0,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":321,"date":"2026-05-04","vendor":"Savrabh","raw":"UPI/SAVRABH/649014842743/Paid via CRED","ref":"UPI-612494406615","amount":-1100.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":322,"date":"2026-05-04","vendor":"Mukesh Bharatbhai","raw":"UPI/MUKESH BHARATBH/649012839166/Paid via CRED","ref":"UPI-612493061211","amount":-20000.0,"cat":"Labour & Contractors","sub":"Unassigned Labour / Vendor","conf":"review","note":""},{"id":323,"date":"2026-05-04","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/649085054922/RecurringTxn","ref":"UPI-612478811549","amount":-1250.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":324,"date":"2026-05-04","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/649084966140/RecurringTxn","ref":"UPI-612478744047","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":325,"date":"2026-05-04","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/649083744646/RecurringTxn","ref":"UPI-612478267305","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":326,"date":"2026-05-04","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/649083679334/RecurringTxn","ref":"UPI-612478251337","amount":-5000.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":327,"date":"2026-05-04","vendor":"Indian Clearing Corp (SIP)","raw":"UPI/Indian Clearing/649083545324/RecurringTxn","ref":"UPI-612478218120","amount":-2500.0,"cat":"Finance & Debt","sub":"SIP / Recurring Investment","conf":"confirmed","note":""},{"id":328,"date":"2026-05-03","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317950399","ref":"","amount":25000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":329,"date":"2026-05-03","vendor":"Dalwala Jignesh","raw":"UPI/Dalwala Jignash/648901759534/Paid via CRED","ref":"UPI-612358267601","amount":-4500.0,"cat":"Structural Material","sub":"Cement","conf":"confirmed","note":""},{"id":330,"date":"2026-05-03","vendor":"CRED (Credit Card)","raw":"UPI/CRED Club/648910724877/payment on CRED","ref":"UPI-612343055007","amount":-8026.0,"cat":"Finance & Debt","sub":"Credit Card Payment","conf":"confirmed","note":""},{"id":331,"date":"2026-05-03","vendor":"Dalwala Jignesh","raw":"UPI/Dalwala Jignash/648912663272/Paid via CRED","ref":"UPI-612324834072","amount":-11750.0,"cat":"Structural Material","sub":"Cement","conf":"confirmed","note":""},{"id":332,"date":"2026-05-03","vendor":"L&T Finance (Loan EMI)","raw":"NACH-10-DR-L&TFINANCELTD-H02LP260306213836 G69002","ref":"NACHDB03052600347396","amount":-2127.0,"cat":"Finance & Debt","sub":"Home / Term Loan EMI","conf":"confirmed","note":""},{"id":333,"date":"2026-05-02","vendor":"Sweep Transfer (in)","raw":"Sweep Trf From: 5317950399","ref":"","amount":25000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":334,"date":"2026-05-02","vendor":"Patel Ramilaben","raw":"UPI/PATEL RAMILABEN/648816587418/Vyapar6195","ref":"UPI-612290774319","amount":-1650.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":335,"date":"2026-05-02","vendor":"Kamal Fruit Centre","raw":"UPI/KAMAL FRUIT CEN/648828534864/Paid via CRED","ref":"UPI-612279712122","amount":-300.0,"cat":"Household & Personal","sub":"Groceries & Food","conf":"confirmed","note":""},{"id":336,"date":"2026-05-02","vendor":"Kamal Fruit Centre","raw":"UPI/KAMAL FRUIT CEN/648822556533/Paid via CRED","ref":"UPI-612279514180","amount":-1250.0,"cat":"Household & Personal","sub":"Groceries & Food","conf":"confirmed","note":""},{"id":337,"date":"2026-05-02","vendor":"Dalwala Jignesh","raw":"UPI/Dalwala Jignash/648806472066/Paid via CRED","ref":"UPI-612252888733","amount":-3600.0,"cat":"Structural Material","sub":"Cement","conf":"confirmed","note":""},{"id":338,"date":"2026-05-02","vendor":"Bajaj Finance (Loan EMI)","raw":"DIRECT DEBIT-DR-BAJAJ FINANCE LTD-418SPFGL936074","ref":"NACHDD02052600561948","amount":-1106.0,"cat":"Finance & Debt","sub":"Home / Term Loan EMI","conf":"confirmed","note":""},{"id":339,"date":"2026-05-02","vendor":"Patel Vandan","raw":"UPI/Patel  Vandan/648803454614/Paid via CRED","ref":"UPI-612248759318","amount":-3000.0,"cat":"Structural Material","sub":"Steel / TMT Bars","conf":"confirmed","note":""},{"id":340,"date":"2026-05-02","vendor":"Patel Vandan","raw":"UPI/Patel  Vandan/648810470211/Paid via CRED","ref":"UPI-612248614235","amount":-37410.0,"cat":"Structural Material","sub":"Steel / TMT Bars","conf":"confirmed","note":""},{"id":341,"date":"2026-05-01","vendor":"Sweep Transfer (out)","raw":"SWEEP TRANSFER TO [5317950399]","ref":"","amount":-75000.0,"cat":"Transfers & Income","sub":"Internal Sweep / FD","conf":"confirmed","note":""},{"id":342,"date":"2026-05-01","vendor":"Akshar Gruh Udhyog","raw":"UPI/Akshar Gruh Udh/648707362952/Paid via CRED","ref":"UPI-612112897003","amount":-275.0,"cat":"Hardware & Consumables","sub":"Fasteners & Misc","conf":"inferred","note":""},{"id":343,"date":"2026-05-01","vendor":"Prithvi Raj","raw":"UPI/PRITHVI RAJ/648709361037/Paid via CRED","ref":"UPI-612110580747","amount":-120.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":344,"date":"2026-05-01","vendor":"Ramdulare .","raw":"UPI/RAMDULARE  ./648701368655/Paid via CRED","ref":"UPI-612110404453","amount":-100.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":345,"date":"2026-05-01","vendor":"Patni Ajaybhai","raw":"UPI/Patni Ajaybhai /648729365760/Paid via CRED","ref":"UPI-612110126252","amount":-20.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":346,"date":"2026-05-01","vendor":"Patni Ajaybhai","raw":"UPI/Patni Ajaybhai /648722373602/Paid via CRED","ref":"UPI-612110027423","amount":-100.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":347,"date":"2026-05-01","vendor":"Shailendrakumar","raw":"UPI/SHAILENDRAKUMAR/648721352195/15th march to 1","ref":"UPI-612105271975","amount":-1315.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":348,"date":"2026-05-01","vendor":"Velocify Digital Solutions LLP","raw":"MB:RECEIVED FROM VELOCIFY DIGITAL SOLUTIONS LLP/AP","ref":"MB-998350489304","amount":100000.0,"cat":"Transfers & Income","sub":"Income Received","conf":"confirmed","note":""},{"id":349,"date":"2026-05-01","vendor":"Mr PATEL SUNILK","raw":"UPI/Mr PATEL SUNILK/648703245899/Paid via CRED","ref":"UPI-612170828488","amount":-170.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":350,"date":"2026-05-01","vendor":"Reversal: SACHCHA SAUDA","raw":"REV-UPI/SACHCHA SAUDA/612110788017/PaidViaKotakA","ref":"UPI-612170729991","amount":170.0,"cat":"Transfers & Income","sub":"Refund / Reversal","conf":"confirmed","note":""},{"id":351,"date":"2026-05-01","vendor":"Sachcha Sauda S","raw":"UPI/SACHCHA SAUDA S/612110788017/PaidViaKotakApp","ref":"UPI-612170729991","amount":-170.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":352,"date":"2026-05-01","vendor":"Patel Kasmiraben","raw":"UPI/PATEL  KASMIRAB/648730238038/Paid via CRED","ref":"UPI-612167287512","amount":-80.0,"cat":"Labour & Contractors","sub":"Daily Wage / Petty Labour","conf":"review","note":""},{"id":353,"date":"2026-04-30","vendor":"Gautambhai Barot","raw":"UPI/BAROT GAUTAMBHA/612017967070/PaidViaKotakApp","ref":"UPI-612025563409","amount":-10000.0,"cat":"Labour & Contractors","sub":"Main Civil Contractor","conf":"confirmed","note":""},{"id":354,"date":"2026-04-30","vendor":"Patel Vandan","raw":"UPI/VANDAN NARESHBH/612010525992/PaidViaKotakApp","ref":"UPI-612099549800","amount":-14000.0,"cat":"Structural Material","sub":"Steel / TMT Bars","conf":"confirmed","note":""}]};
+
+/* ------------------------------------------------------------ state */
+const KEY = 'constructionDash.v1';
+let S = null;
+
+function freshState() {
+  return {
+    taxonomy: structuredClone(SEED.taxonomy),
+    excluded: [...SEED.excludedCats],
+    txns: structuredClone(SEED.txns),
+    theme: null,
+  };
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (p && p.txns && p.taxonomy) return p;
+    }
+  } catch (e) { /* fall through to a clean state */ }
+  return freshState();
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch (e) { /* private mode / quota — edits still live in memory */ }
+}
+
+S = load();
+
+/* ------------------------------------------------------------ helpers */
+const $ = id => document.getElementById(id);
+const isExcl = c => S.excluded.includes(c);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+const inr = n => '₹' + Math.round(Math.abs(n)).toLocaleString('en-IN');
+function short(n) {
+  const a = Math.abs(n);
+  if (a >= 1e7) return '₹' + (a/1e7).toFixed(2) + ' Cr';
+  if (a >= 1e5) return '₹' + (a/1e5).toFixed(2) + ' L';
+  if (a >= 1e3) return '₹' + Math.round(a/1e3) + 'k';
+  return '₹' + Math.round(a);
+}
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const dmy = d => { const [y,m,dd] = d.split('-'); return `${dd} ${MON[+m-1]}`; };
+const ym  = d => d.slice(0,7);
+const ymLabel = k => { const [y,m] = k.split('-'); return `${MON[+m-1]} ${y}`; };
+
+/** Spend as a positive number; credits count as zero spend. */
+const spendOf = t => t.amount < 0 ? -t.amount : 0;
+const constructionTxns = () => S.txns.filter(t => !isExcl(t.cat));
+
+/** Inclusive day count between the first and last transaction. */
+function spanDays(txns) {
+  if (!txns.length) return 1;
+  const ds = txns.map(t => Date.parse(t.date));
+  return Math.max(1, Math.round((Math.max(...ds) - Math.min(...ds)) / 864e5) + 1);
+}
+
+/* ------------------------------------------------------------ tooltip */
+const tip = $('tip');
+function bindTip(el, html) {
+  el.addEventListener('mouseenter', () => { tip.innerHTML = html; tip.classList.add('on'); });
+  el.addEventListener('mousemove', e => {
+    const pad = 14;
+    let x = e.clientX + pad, y = e.clientY + pad;
+    const r = tip.getBoundingClientRect();
+    if (x + r.width > innerWidth - 8) x = e.clientX - r.width - pad;
+    if (y + r.height > innerHeight - 8) y = e.clientY - r.height - pad;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  el.addEventListener('mouseleave', () => tip.classList.remove('on'));
+}
+
+/* ------------------------------------------------------------ selects */
+function catOptions(sel, val, {allowAll = false, allLabel = 'All categories'} = {}) {
+  const cats = Object.keys(S.taxonomy);
+  sel.innerHTML =
+    (allowAll ? `<option value="">${allLabel}</option>` : '') +
+    cats.map(c => `<option value="${esc(c)}"${c === val ? ' selected' : ''}>${esc(c)}${isExcl(c) ? ' ·  excluded' : ''}</option>`).join('');
+  if (!allowAll && !cats.includes(val)) sel.value = cats[0];
+}
+function subOptions(sel, cat, val, {allowAll = false, allLabel = 'All sub-categories'} = {}) {
+  const subs = S.taxonomy[cat] || [];
+  sel.innerHTML =
+    (allowAll ? `<option value="">${allLabel}</option>` : '') +
+    subs.map(s => `<option value="${esc(s)}"${s === val ? ' selected' : ''}>${esc(s)}</option>`).join('');
+  if (!allowAll && !subs.includes(val)) sel.value = subs[0] ?? '';
+}
+
+/* ============================================================ OVERVIEW */
+function renderTiles() {
+  const c = constructionTxns();
+  let total = 0, confirmed = 0, review = 0, inferred = 0;
+  for (const t of c) {
+    const v = spendOf(t);
+    total += v;
+    if (t.conf === 'confirmed') confirmed += v;
+    else if (t.conf === 'inferred') inferred += v;
+    else review += v;
+  }
+  const excl = S.txns.filter(t => isExcl(t.cat)).reduce((a,t) => a + spendOf(t), 0);
+  const nReview = c.filter(t => t.conf === 'review' && t.amount < 0).length;
+  // Calendar-month counting overstates the denominator: the statement opens on
+  // 30 Apr, so April contributes one day. Use the real span instead.
+  const days = spanDays(S.txns);
+  const perMonth = total / days * 30.44;
+
+  $('tiles').innerHTML = `
+    <div class="tile hero">
+      <div class="k">Total construction spend</div>
+      <div class="v">${short(total)}</div>
+      <div class="n">${inr(total)} across ${c.filter(t => t.amount < 0).length} payments</div>
+    </div>
+    <div class="tile">
+      <div class="k">Confirmed</div>
+      <div class="v">${short(confirmed + inferred)}</div>
+      <div class="n">${total ? Math.round((confirmed+inferred)/total*100) : 0}% of spend is vendor-identified</div>
+    </div>
+    <div class="tile">
+      <div class="k">Needs review</div>
+      <div class="v">${short(review)}</div>
+      <div class="n">${nReview} payments still to confirm</div>
+    </div>
+    <div class="tile">
+      <div class="k">Monthly run rate</div>
+      <div class="v">${short(perMonth)}</div>
+      <div class="n">Over ${days} days of statement</div>
+    </div>
+    <div class="tile">
+      <div class="k">Excluded</div>
+      <div class="v">${short(excl)}</div>
+      <div class="n">Loans, cards, transfers, household</div>
+    </div>`;
+}
+
+const openCats = new Set();
+
+function renderCatChart() {
+  const byCat = new Map(), bySub = new Map();   // bySub: cat -> Map(sub -> amount)
+  for (const t of constructionTxns()) {
+    const v = spendOf(t);
+    if (!v) continue;
+    byCat.set(t.cat, (byCat.get(t.cat) || 0) + v);
+    if (!bySub.has(t.cat)) bySub.set(t.cat, new Map());
+    const m = bySub.get(t.cat);
+    m.set(t.sub, (m.get(t.sub) || 0) + v);
+  }
+  const rows = [...byCat.entries()].sort((a,b) => b[1] - a[1]);
+  const total = rows.reduce((a,r) => a + r[1], 0);
+  const max = Math.max(1, ...rows.map(r => r[1]));
+  const el = $('catChart');
+
+  if (!rows.length) { el.innerHTML = '<div class="empty">No construction spend in the current data.</div>'; return; }
+
+  el.innerHTML = rows.map(([c, v]) => {
+    const open = openCats.has(c);
+    const subs = [...(bySub.get(c) || new Map()).entries()].sort((a,b) => b[1] - a[1]);
+    const head = `
+      <div class="row${open ? ' open' : ''}" data-cat="${esc(c)}">
+        <div class="lbl"><span class="caret">▶</span><span>${esc(c)}</span></div>
+        <div class="track"><div class="fill" style="width:${Math.max(1.5, v/max*100)}%"></div></div>
+        <div class="val">${short(v)}<span class="pct">${(v/total*100).toFixed(1)}%</span></div>
+      </div>`;
+    const body = open ? subs.map(([s, sv]) => `
+      <div class="row sub">
+        <div class="lbl">${esc(s)}</div>
+        <div class="track"><div class="fill" style="width:${Math.max(1.5, sv/max*100)}%"></div></div>
+        <div class="val">${short(sv)}<span class="pct">${(sv/v*100).toFixed(0)}% of cat</span></div>
+      </div>`).join('') : '';
+    return head + body;
+  }).join('');
+
+  el.querySelectorAll('.row[data-cat]').forEach(r => {
+    const c = r.dataset.cat, v = byCat.get(c);
+    bindTip(r, `<div class="tt">${esc(c)}</div><div class="tv">${inr(v)}</div>
+      <div class="tm">${(v/total*100).toFixed(1)}% of construction spend · click to expand</div>`);
+    r.addEventListener('click', () => { openCats.has(c) ? openCats.delete(c) : openCats.add(c); renderCatChart(); });
+  });
+}
+
+const SERIES = ['--s1','--s2','--s3','--s4','--s5','--s6'];
+
+function renderMonthChart() {
+  const c = constructionTxns();
+  const byCat = new Map();
+  for (const t of c) byCat.set(t.cat, (byCat.get(t.cat) || 0) + spendOf(t));
+  const top = [...byCat.entries()].sort((a,b) => b[1] - a[1]).slice(0,5).map(r => r[0]);
+  const keys = [...top, 'Other'];
+
+  const months = [...new Set(c.map(t => ym(t.date)))].sort();
+  const grid = new Map(months.map(m => [m, Object.fromEntries(keys.map(k => [k, 0]))]));
+  for (const t of c) {
+    const v = spendOf(t);
+    if (!v) continue;
+    const k = top.includes(t.cat) ? t.cat : 'Other';
+    grid.get(ym(t.date))[k] += v;
+  }
+  const totals = months.map(m => keys.reduce((a,k) => a + grid.get(m)[k], 0));
+  const max = Math.max(1, ...totals);
+
+  $('monthChart').innerHTML = months.map((m, i) => {
+    const g = grid.get(m);
+    const segs = keys.map((k, j) => {
+      const v = g[k];
+      if (!v) return '';
+      const h = v / max * 100;
+      const col = k === 'Other' ? 'var(--baseline)' : `var(${SERIES[j]})`;
+      return `<div class="seg" data-m="${m}" data-k="${esc(k)}" data-v="${v}"
+                   style="height:${h}%; background:${col}"></div>`;
+    }).reverse().join('');
+    return `<div class="mcol">
+        <div class="mstack" style="height:100%">${segs}</div>
+        <div class="mfoot"><div class="m">${ymLabel(m)}</div><div class="t">${short(totals[i])}</div></div>
+      </div>`;
+  }).join('');
+
+  $('monthChart').querySelectorAll('.seg').forEach(s => {
+    const v = +s.dataset.v, m = s.dataset.m;
+    const tot = totals[months.indexOf(m)];
+    bindTip(s, `<div class="tt">${esc(s.dataset.k)}</div><div class="tv">${inr(v)}</div>
+      <div class="tm">${ymLabel(m)} · ${(v/tot*100).toFixed(0)}% of that month</div>`);
+  });
+
+  $('monthLegend').innerHTML = keys.map((k, j) => {
+    const col = k === 'Other' ? 'var(--baseline)' : `var(${SERIES[j]})`;
+    return `<span><i class="swatch" style="background:${col}"></i>${esc(k)}</span>`;
+  }).join('');
+}
+
+function renderVendorChart() {
+  const by = new Map();
+  for (const t of constructionTxns()) {
+    const v = spendOf(t);
+    if (!v) continue;
+    by.set(t.vendor, (by.get(t.vendor) || 0) + v);
+  }
+  const rows = [...by.entries()].sort((a,b) => b[1] - a[1]).slice(0, 12);
+  const max = Math.max(1, ...rows.map(r => r[1]));
+  const grand = [...by.values()].reduce((a,b) => a+b, 0);
+
+  $('vendorChart').innerHTML = rows.map(([v, amt]) => `
+    <div class="row" data-v="${esc(v)}">
+      <div class="lbl">${esc(v)}</div>
+      <div class="track"><div class="fill" style="width:${Math.max(1.5, amt/max*100)}%"></div></div>
+      <div class="val">${short(amt)}<span class="pct">${(amt/grand*100).toFixed(1)}%</span></div>
+    </div>`).join('');
+
+  $('vendorChart').querySelectorAll('.row').forEach(r => {
+    const name = r.dataset.v;
+    const ts = constructionTxns().filter(t => t.vendor === name && t.amount < 0);
+    const amt = by.get(name);
+    bindTip(r, `<div class="tt">${esc(name)}</div><div class="tv">${inr(amt)}</div>
+      <div class="tm">${ts.length} payment${ts.length === 1 ? '' : 's'} · ${esc(ts[0]?.cat || '')} › ${esc(ts[0]?.sub || '')}</div>`);
+    r.addEventListener('click', () => { go('txns'); $('q').value = name; renderTable(); });
+  });
+}
+
+/* ============================================================ TXNS */
+let selection = new Set();
+
+function filtered() {
+  const q = $('q').value.trim().toLowerCase();
+  const fc = $('fCat').value, fs = $('fSub').value, fk = $('fConf').value, fm = $('fMonth').value;
+  const onlyC = $('fConstr').checked, onlyD = $('fDebit').checked;
+  return S.txns.filter(t => {
+    if (onlyC && isExcl(t.cat)) return false;
+    if (onlyD && t.amount >= 0) return false;
+    if (fc && t.cat !== fc) return false;
+    if (fs && t.sub !== fs) return false;
+    if (fk && t.conf !== fk) return false;
+    if (fm && ym(t.date) !== fm) return false;
+    if (q && !(t.vendor.toLowerCase().includes(q) || t.raw.toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+function renderFilterSelects() {
+  const fc = $('fCat'), fs = $('fSub'), fm = $('fMonth');
+  const cv = fc.value, sv = fs.value, mv = fm.value;
+  catOptions(fc, cv, {allowAll: true});
+  fc.value = Object.keys(S.taxonomy).includes(cv) ? cv : '';
+  if (fc.value) { subOptions(fs, fc.value, sv, {allowAll: true}); fs.value = (S.taxonomy[fc.value] || []).includes(sv) ? sv : ''; }
+  else { fs.innerHTML = '<option value="">All sub-categories</option>'; }
+
+  const months = [...new Set(S.txns.map(t => ym(t.date)))].sort();
+  fm.innerHTML = '<option value="">All months</option>' + months.map(m => `<option value="${m}">${ymLabel(m)}</option>`).join('');
+  fm.value = mv;
+}
+
+function renderTable() {
+  const rows = filtered();
+  const tb = $('tbody');
+  const cats = Object.keys(S.taxonomy);
+
+  $('cnt').textContent = `${rows.length} of ${S.txns.length} transactions · ${inr(rows.reduce((a,t) => a + spendOf(t), 0))}`;
+
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="9"><div class="empty">Nothing matches these filters.</div></td></tr>'; return; }
+
+  tb.innerHTML = rows.map(t => {
+    const co = cats.map(c => `<option value="${esc(c)}"${c === t.cat ? ' selected' : ''}>${esc(c)}</option>`).join('');
+    const so = (S.taxonomy[t.cat] || []).map(s => `<option value="${esc(s)}"${s === t.sub ? ' selected' : ''}>${esc(s)}</option>`).join('');
+    const cr = t.amount >= 0;
+    return `<tr data-id="${t.id}" class="${selection.has(t.id) ? 'sel' : ''}">
+      <td><input type="checkbox" class="rowsel" data-id="${t.id}"${selection.has(t.id) ? ' checked' : ''}></td>
+      <td class="dt">${dmy(t.date)}</td>
+      <td class="vn" title="${esc(t.vendor)}">${esc(t.vendor)}</td>
+      <td class="rawc" title="${esc(t.raw)}">${esc(t.raw)}</td>
+      <td class="amt${cr ? ' cr' : ''}">${cr ? '+' : ''}${inr(t.amount)}</td>
+      <td><select class="cs cat" data-id="${t.id}">${co}</select></td>
+      <td><select class="cs sub" data-id="${t.id}">${so}</select></td>
+      <td><span class="pill ${isExcl(t.cat) ? 'excl' : t.conf}">${isExcl(t.cat) ? 'excluded' : t.conf}</span></td>
+      <td><input class="note" data-id="${t.id}" value="${esc(t.note)}" placeholder="add a note"></td>
+    </tr>`;
+  }).join('');
+
+  tb.querySelectorAll('select.cat').forEach(s => s.addEventListener('change', e => {
+    const t = S.txns.find(x => x.id === +e.target.dataset.id);
+    t.cat = e.target.value;
+    t.sub = (S.taxonomy[t.cat] || [])[0] ?? '';
+    t.conf = 'confirmed';
+    commit();
+  }));
+  tb.querySelectorAll('select.sub').forEach(s => s.addEventListener('change', e => {
+    const t = S.txns.find(x => x.id === +e.target.dataset.id);
+    t.sub = e.target.value;
+    t.conf = 'confirmed';
+    commit();
+  }));
+  tb.querySelectorAll('input.note').forEach(i => i.addEventListener('change', e => {
+    S.txns.find(x => x.id === +e.target.dataset.id).note = e.target.value;
+    save();
+  }));
+  tb.querySelectorAll('input.rowsel').forEach(i => i.addEventListener('change', e => {
+    const id = +e.target.dataset.id;
+    e.target.checked ? selection.add(id) : selection.delete(id);
+    e.target.closest('tr').classList.toggle('sel', e.target.checked);
+    renderBulk();
+  }));
+}
+
+function renderBulk() {
+  const bar = $('bulk');
+  bar.classList.toggle('on', selection.size > 0);
+  if (!selection.size) return;
+  const sum = S.txns.filter(t => selection.has(t.id)).reduce((a,t) => a + spendOf(t), 0);
+  $('bulkN').textContent = `${selection.size} selected · ${inr(sum)} →`;
+  const bc = $('bulkCat'), bs = $('bulkSub');
+  if (!bc.value || !S.taxonomy[bc.value]) { catOptions(bc, Object.keys(S.taxonomy)[0]); }
+  subOptions(bs, bc.value, bs.value);
+}
+
+/* ============================================================ VENDORS */
+function vendorRollup(constructionOnly) {
+  const m = new Map();
+  for (const t of S.txns) {
+    if (constructionOnly && isExcl(t.cat)) continue;
+    let v = m.get(t.vendor);
+    if (!v) { v = {vendor: t.vendor, n: 0, sum: 0, first: t.date, last: t.date, cats: new Set(), subs: new Set(), conf: new Set()}; m.set(t.vendor, v); }
+    v.n++; v.sum += spendOf(t);
+    if (t.date < v.first) v.first = t.date;
+    if (t.date > v.last) v.last = t.date;
+    v.cats.add(t.cat); v.subs.add(t.sub); v.conf.add(t.conf);
+  }
+  return [...m.values()].sort((a,b) => b.sum - a.sum);
+}
+
+function renderVendors() {
+  const q = $('vq').value.trim().toLowerCase();
+  const rows = vendorRollup($('vConstr').checked).filter(v => !q || v.vendor.toLowerCase().includes(q));
+  $('vcnt').textContent = `${rows.length} vendors · ${inr(rows.reduce((a,v) => a + v.sum, 0))}`;
+  const cats = Object.keys(S.taxonomy);
+  const tb = $('vbody');
+
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="7"><div class="empty">No vendors match.</div></td></tr>'; return; }
+
+  tb.innerHTML = rows.map(v => {
+    const mixedCat = v.cats.size > 1, mixedSub = v.subs.size > 1;
+    const cat = mixedCat ? '' : [...v.cats][0];
+    const sub = mixedSub ? '' : [...v.subs][0];
+    const co = (mixedCat ? '<option value="">— mixed —</option>' : '') +
+      cats.map(c => `<option value="${esc(c)}"${c === cat ? ' selected' : ''}>${esc(c)}</option>`).join('');
+    const so = (mixedSub ? '<option value="">— mixed —</option>' : '') +
+      (S.taxonomy[cat] || []).map(s => `<option value="${esc(s)}"${s === sub ? ' selected' : ''}>${esc(s)}</option>`).join('');
+    const conf = v.conf.has('review') ? 'review' : (v.conf.has('inferred') ? 'inferred' : 'confirmed');
+    return `<tr data-v="${esc(v.vendor)}">
+      <td class="vn" title="${esc(v.vendor)}">${esc(v.vendor)}</td>
+      <td class="amt">${v.n}</td>
+      <td class="amt">${inr(v.sum)}</td>
+      <td class="dt">${dmy(v.first)} → ${dmy(v.last)}</td>
+      <td><select class="cs vcat" data-v="${esc(v.vendor)}">${co}</select></td>
+      <td><select class="cs vsub" data-v="${esc(v.vendor)}">${so}</select></td>
+      <td><span class="pill ${conf}">${conf}</span></td>
+    </tr>`;
+  }).join('');
+
+  tb.querySelectorAll('select.vcat').forEach(s => s.addEventListener('change', e => {
+    assignVendor(e.target.dataset.v, e.target.value, null);
+  }));
+  tb.querySelectorAll('select.vsub').forEach(s => s.addEventListener('change', e => {
+    const row = e.target.closest('tr');
+    assignVendor(e.target.dataset.v, row.querySelector('select.vcat').value, e.target.value);
+  }));
+}
+
+function assignVendor(vendor, cat, sub) {
+  if (!cat) return;
+  const s = sub ?? (S.taxonomy[cat] || [])[0] ?? '';
+  for (const t of S.txns) {
+    if (t.vendor === vendor) { t.cat = cat; t.sub = s; t.conf = 'confirmed'; }
+  }
+  commit();
+}
+
+/* ============================================================ REVIEW */
+function renderReview() {
+  const m = new Map();
+  for (const t of S.txns) {
+    if (t.conf !== 'review' || t.amount >= 0) continue;
+    let v = m.get(t.vendor);
+    if (!v) { v = {vendor: t.vendor, n: 0, sum: 0, cat: t.cat, sub: t.sub}; m.set(t.vendor, v); }
+    v.n++; v.sum += spendOf(t);
+  }
+  const rows = [...m.values()].sort((a,b) => b.sum - a.sum);
+  const cats = Object.keys(S.taxonomy);
+  const tb = $('rbody');
+  $('badgeReview').textContent = rows.length || '';
+
+  if (!rows.length) {
+    tb.innerHTML = '<tr><td colspan="7"><div class="empty">Nothing left to review — every payment has a confirmed category.</div></td></tr>';
+    return;
+  }
+
+  tb.innerHTML = rows.map(v => `
+    <tr data-v="${esc(v.vendor)}">
+      <td class="vn" title="${esc(v.vendor)}">${esc(v.vendor)}</td>
+      <td class="amt">${v.n}</td>
+      <td class="amt">${inr(v.sum)}</td>
+      <td style="color:var(--muted); font-size:11.5px">${esc(v.cat)} › ${esc(v.sub)}</td>
+      <td><select class="cs rcat" data-v="${esc(v.vendor)}">${
+        cats.map(c => `<option value="${esc(c)}"${c === v.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')
+      }</select></td>
+      <td><select class="cs rsub" data-v="${esc(v.vendor)}">${
+        (S.taxonomy[v.cat] || []).map(s => `<option value="${esc(s)}"${s === v.sub ? ' selected' : ''}>${esc(s)}</option>`).join('')
+      }</select></td>
+      <td><button class="primary rok" data-v="${esc(v.vendor)}">Confirm</button></td>
+    </tr>`).join('');
+
+  tb.querySelectorAll('select.rcat').forEach(s => s.addEventListener('change', e => {
+    const sub = e.target.closest('tr').querySelector('select.rsub');
+    subOptions(sub, e.target.value, null);
+  }));
+  tb.querySelectorAll('button.rok').forEach(b => b.addEventListener('click', e => {
+    const tr = e.target.closest('tr');
+    assignVendor(e.target.dataset.v, tr.querySelector('select.rcat').value, tr.querySelector('select.rsub').value);
+  }));
+}
+
+/* ============================================================ CATEGORIES */
+function renderCats() {
+  const counts = new Map(), sums = new Map();   // counts: cat -> Map(sub -> n)
+  for (const t of S.txns) {
+    if (!counts.has(t.cat)) counts.set(t.cat, new Map());
+    const m = counts.get(t.cat);
+    m.set(t.sub, (m.get(t.sub) || 0) + 1);
+    sums.set(t.cat, (sums.get(t.cat) || 0) + spendOf(t));
+  }
+
+  $('catgrid').innerHTML = Object.entries(S.taxonomy).map(([c, subs]) => {
+    const ex = isExcl(c);
+    const used = S.txns.filter(t => t.cat === c).length;
+    return `<div class="catcard${ex ? ' excl' : ''}">
+      <h3>
+        <span style="flex:1">${esc(c)}</span>
+        ${ex ? '<span class="tag">excluded</span>' : ''}
+        <button data-act="rencat" data-c="${esc(c)}" title="Rename">✎</button>
+        <button data-act="togglecat" data-c="${esc(c)}" title="${ex ? 'Count as construction' : 'Exclude from construction totals'}">${ex ? '＋' : '⊘'}</button>
+        <button data-act="delcat" data-c="${esc(c)}" class="danger" title="Delete">✕</button>
+      </h3>
+      <div class="meta">${used} transactions · ${inr(sums.get(c) || 0)}</div>
+      <div class="subs">${subs.map(s => `
+        <div class="subrow">
+          <span class="sname">${esc(s)}</span>
+          <span class="scount">${(counts.get(c) || new Map()).get(s) || 0}</span>
+          <button data-act="rensub" data-c="${esc(c)}" data-s="${esc(s)}" title="Rename">✎</button>
+          <button data-act="delsub" data-c="${esc(c)}" data-s="${esc(s)}" class="danger" title="Delete">✕</button>
+        </div>`).join('')}</div>
+      <div class="addrow">
+        <input placeholder="New sub-category…" data-c="${esc(c)}">
+        <button data-act="addsub" data-c="${esc(c)}">Add</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  $('catgrid').querySelectorAll('button[data-act]').forEach(b => b.addEventListener('click', onCatAction));
+  $('catgrid').querySelectorAll('.addrow input').forEach(i => i.addEventListener('keydown', e => {
+    if (e.key === 'Enter') addSub(i.dataset.c, i.value);
+  }));
+}
+
+function addSub(cat, name) {
+  name = (name || '').trim();
+  if (!name) return;
+  if (S.taxonomy[cat].includes(name)) { alert('That sub-category already exists.'); return; }
+  S.taxonomy[cat].push(name);
+  commit();
+}
+
+function onCatAction(e) {
+  const b = e.currentTarget, act = b.dataset.act, c = b.dataset.c, s = b.dataset.s;
+
+  if (act === 'addsub') { addSub(c, b.previousElementSibling.value); return; }
+
+  if (act === 'rencat') {
+    const n = prompt('Rename category', c);
+    if (!n || n.trim() === c) return;
+    const name = n.trim();
+    if (S.taxonomy[name]) { alert('A category with that name already exists.'); return; }
+    const next = {};
+    for (const [k, v] of Object.entries(S.taxonomy)) next[k === c ? name : k] = v;
+    S.taxonomy = next;
+    S.excluded = S.excluded.map(x => x === c ? name : x);
+    S.txns.forEach(t => { if (t.cat === c) t.cat = name; });
+    commit(); return;
+  }
+
+  if (act === 'togglecat') {
+    S.excluded = isExcl(c) ? S.excluded.filter(x => x !== c) : [...S.excluded, c];
+    commit(); return;
+  }
+
+  if (act === 'delcat') {
+    const n = S.txns.filter(t => t.cat === c).length;
+    const others = Object.keys(S.taxonomy).filter(x => x !== c);
+    if (!others.length) { alert('You need at least one category.'); return; }
+    if (!confirm(`Delete "${c}"?` + (n ? `\n\n${n} transaction(s) will move to "Unclassified › Needs Review".` : ''))) return;
+    delete S.taxonomy[c];
+    S.excluded = S.excluded.filter(x => x !== c);
+    if (n) reassignOrphans(t => t.cat === c);
+    commit(); return;
+  }
+
+  if (act === 'rensub') {
+    const n = prompt('Rename sub-category', s);
+    if (!n || n.trim() === s) return;
+    const name = n.trim();
+    if (S.taxonomy[c].includes(name)) { alert('That sub-category already exists.'); return; }
+    S.taxonomy[c] = S.taxonomy[c].map(x => x === s ? name : x);
+    S.txns.forEach(t => { if (t.cat === c && t.sub === s) t.sub = name; });
+    commit(); return;
+  }
+
+  if (act === 'delsub') {
+    if (S.taxonomy[c].length === 1) { alert('A category needs at least one sub-category.'); return; }
+    const n = S.txns.filter(t => t.cat === c && t.sub === s).length;
+    if (!confirm(`Delete "${s}"?` + (n ? `\n\n${n} transaction(s) will move to the first sub-category of "${c}".` : ''))) return;
+    S.taxonomy[c] = S.taxonomy[c].filter(x => x !== s);
+    const fallback = S.taxonomy[c][0];
+    S.txns.forEach(t => { if (t.cat === c && t.sub === s) { t.sub = fallback; t.conf = 'review'; } });
+    commit(); return;
+  }
+}
+
+/** Park transactions whose category vanished into a guaranteed home. */
+function reassignOrphans(pred) {
+  if (!S.taxonomy['Unclassified']) S.taxonomy['Unclassified'] = ['Needs Review'];
+  if (!S.taxonomy['Unclassified'].length) S.taxonomy['Unclassified'].push('Needs Review');
+  const sub = S.taxonomy['Unclassified'][0];
+  S.txns.forEach(t => { if (pred(t)) { t.cat = 'Unclassified'; t.sub = sub; t.conf = 'review'; } });
+}
+
+/* ============================================================ shell */
+function commit() { save(); renderAll(); }
+
+function renderAll() {
+  // any transaction pointing at a category/sub that no longer exists gets parked
+  reassignOrphans(t => !S.taxonomy[t.cat]);
+  S.txns.forEach(t => {
+    const subs = S.taxonomy[t.cat];
+    if (subs && !subs.includes(t.sub)) { t.sub = subs[0]; t.conf = 'review'; }
+  });
+
+  $('metaLine').textContent = `${SEED.meta.holder} · ${SEED.meta.account} · ${SEED.meta.period}`;
+  renderTiles(); renderCatChart(); renderMonthChart(); renderVendorChart();
+  renderFilterSelects(); renderTable(); renderBulk();
+  renderVendors(); renderReview(); renderCats();
+  $('badgeVendors').textContent = vendorRollup(true).length;
+}
+
+function go(v) {
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+  document.querySelectorAll('.view').forEach(d => d.classList.toggle('on', d.id === 'view-' + v));
+  window.scrollTo({top: 0});
+}
+document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('click', () => go(b.dataset.view)));
+
+/* filters */
+['q','fConf','fMonth','fConstr','fDebit'].forEach(id => {
+  $(id).addEventListener($(id).type === 'text' ? 'input' : 'change', renderTable);
+});
+$('fCat').addEventListener('change', () => {
+  const c = $('fCat').value;
+  if (c) subOptions($('fSub'), c, null, {allowAll: true});
+  else $('fSub').innerHTML = '<option value="">All sub-categories</option>';
+  renderTable();
+});
+$('fSub').addEventListener('change', renderTable);
+$('selAll').addEventListener('change', e => {
+  const rows = filtered();
+  if (e.target.checked) rows.forEach(t => selection.add(t.id));
+  else rows.forEach(t => selection.delete(t.id));
+  renderTable(); renderBulk();
+});
+
+/* bulk */
+$('bulkCat').addEventListener('change', () => subOptions($('bulkSub'), $('bulkCat').value, null));
+$('bulkApply').addEventListener('click', () => {
+  const c = $('bulkCat').value, s = $('bulkSub').value;
+  if (!c) return;
+  S.txns.forEach(t => { if (selection.has(t.id)) { t.cat = c; t.sub = s; t.conf = 'confirmed'; } });
+  selection.clear();
+  commit();
+});
+$('bulkClear').addEventListener('click', () => { selection.clear(); renderTable(); renderBulk(); });
+
+/* vendors */
+$('vq').addEventListener('input', renderVendors);
+$('vConstr').addEventListener('change', renderVendors);
+
+/* categories */
+$('addCat').addEventListener('click', () => {
+  const name = $('newCat').value.trim();
+  if (!name) { alert('Give the category a name first.'); return; }
+  if (S.taxonomy[name]) { alert('That category already exists.'); return; }
+  S.taxonomy[name] = ['General'];
+  if ($('newCatKind').value === 'excluded') S.excluded.push(name);
+  $('newCat').value = '';
+  commit();
+});
+$('newCat').addEventListener('keydown', e => { if (e.key === 'Enter') $('addCat').click(); });
+
+/* export / import */
+$('btnCsv').addEventListener('click', () => {
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [['Date','Vendor','Bank description','Reference','Amount (INR)','Spend (INR)','Category','Sub-category','Counts as construction','Status','Note'].join(',')];
+  for (const t of S.txns) {
+    lines.push([q(t.date), q(t.vendor), q(t.raw), q(t.ref), t.amount, spendOf(t),
+                q(t.cat), q(t.sub), isExcl(t.cat) ? 'No' : 'Yes', q(t.conf), q(t.note)].join(','));
+  }
+  download(new Blob(['\uFEFF' + lines.join('\n')], {type:'text/csv;charset=utf-8'}), 'construction_expenses.csv');
+});
+$('btnJson').addEventListener('click', () => {
+  download(new Blob([JSON.stringify(S, null, 1)], {type:'application/json'}), 'construction_dashboard_backup.json');
+});
+$('btnImport').addEventListener('click', () => $('fileIn').click());
+$('fileIn').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const p = JSON.parse(ev.target.result);
+      if (!p.txns || !p.taxonomy) throw new Error('not a dashboard backup');
+      S = p;
+      if (!Array.isArray(S.excluded)) S.excluded = [];
+      selection.clear();
+      applyTheme();
+      commit();
+      alert('Backup restored.');
+    } catch (err) { alert('Could not read that file: ' + err.message); }
+  };
+  r.readAsText(f);
+  e.target.value = '';
+});
+$('btnReset').addEventListener('click', () => {
+  if (!confirm('Discard every edit and return to the original categorisation?\n\nSave a backup first if you want to keep this work.')) return;
+  const theme = S.theme;
+  S = freshState();
+  S.theme = theme;
+  selection.clear();
+  commit();
+});
+
+function download(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+/* theme */
+function applyTheme() {
+  if (S.theme) document.documentElement.setAttribute('data-theme', S.theme);
+  else document.documentElement.removeAttribute('data-theme');
+}
+$('btnTheme').addEventListener('click', () => {
+  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const cur = S.theme || (dark ? 'dark' : 'light');
+  S.theme = cur === 'dark' ? 'light' : 'dark';
+  applyTheme(); save();
+});
+
+applyTheme();
+renderAll();
+</script>
+</body>
+</html>
