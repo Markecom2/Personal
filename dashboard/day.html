@@ -355,6 +355,74 @@
   .task.priority-top { border-left: 3px solid var(--critical); }
   .task.priority-mid { border-left: 3px solid var(--warn); }
 
+  /* Projects grid */
+  .projects {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
+  .project-card {
+    text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 10px 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font: inherit;
+    color: inherit;
+    transition: border-color 120ms, background 120ms;
+  }
+  .project-card:hover { border-color: var(--accent); }
+  .project-card.selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .project-card .name {
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+    color: var(--ink);
+  }
+  .project-card .meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+  .project-card .count-pill {
+    font-variant-numeric: tabular-nums;
+  }
+  .project-card.selected .count-pill,
+  .project-card.selected .name { color: var(--accent); }
+
+  .project-card.all { border-style: dashed; }
+  .project-card.all .name { color: var(--ink-mute); font-size: 14px; padding-top: 2px; }
+
+  .clear-filter {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 6px;
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--ink-mute);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  .clear-filter:hover { color: var(--ink); border-color: var(--accent); }
+
   .example-pill {
     display: inline-block;
     padding: 1px 6px;
@@ -536,15 +604,21 @@
 
     <div class="col">
       <section>
-        <h2>From email <span class="count" id="email-count">— open</span></h2>
-        <div class="section-hint">Tasks the sync job extracted from your inbox.</div>
-        <div class="tasks" id="email-list"></div>
+        <h2>Projects <span class="count" id="projects-count">— active</span></h2>
+        <div class="section-hint">Click a project to see its open items below.</div>
+        <div class="projects" id="projects-grid"></div>
       </section>
 
       <section>
         <h2>Project queue <span class="count" id="pm-count">— open</span></h2>
-        <div class="section-hint">Open items from your PM tool.</div>
+        <div class="section-hint" id="pm-hint">Open items across all projects.</div>
         <div class="tasks" id="pm-list"></div>
+      </section>
+
+      <section>
+        <h2>From email <span class="count" id="email-count">— open</span></h2>
+        <div class="section-hint">Admin, security, and personal items from your inbox.</div>
+        <div class="tasks" id="email-list"></div>
       </section>
 
       <section>
@@ -613,10 +687,11 @@
 
   // ---- State
   const state = {
-    tasks: [],   // {id, title, why?, source, priority, status: 'open'|'done', createdAt, completedAt?, example?}
+    tasks: [],   // {id, title, why?, source, category, project?, priority, deadline?, status, createdAt, completedAt?, example?}
     events: [],  // {id, title, start, end, who?, example?}
     online: false,
     lastSync: null,
+    selectedProject: null, // null = show all
   };
   let db = null;
   let tasksUnsub = null;
@@ -663,12 +738,19 @@
 
     renderCalendar(events);
     const focus = tasks.filter(t => t.status === "open" && t.priority === "top").sort(byDeadline);
-    const project = tasks.filter(t => t.status === "open" && t.category === "project" && t.priority !== "top").sort(byDeadline);
+    const allProject = tasks.filter(t => t.status === "open" && t.category === "project" && t.priority !== "top");
+    const projectFiltered = state.selectedProject
+      ? tasks.filter(t => t.status === "open" && t.project === state.selectedProject)
+      : allProject;
     const email = tasks.filter(t => t.status === "open" && t.source === "email" && t.category !== "project" && t.priority !== "top").sort(byDeadline);
     const later = tasks.filter(t => t.status === "open" && t.priority === "later" && t.category !== "project" && t.source !== "email");
+
+    renderProjects(tasks);
     renderTaskList("focus-list", focus, "focus-count", "No focus set yet — sync will populate.");
     renderTaskList("email-list", email, "email-count", "Inbox is quiet.");
-    renderTaskList("pm-list", project, "pm-count", "No open project items.");
+    renderTaskList("pm-list", projectFiltered.sort(byDeadline), "pm-count",
+      state.selectedProject ? `No open items for ${state.selectedProject}.` : "No open project items.");
+    updatePmHint();
     renderTaskList("later-list", later, "later-count", "Nothing parked.");
 
     const doneToday = tasks.filter(t => t.status === "done" && sameDay(t.completedAt));
@@ -780,6 +862,104 @@
     return a.deadline.localeCompare(b.deadline);
   }
 
+  function renderProjects(tasks) {
+    // group all open tasks (any priority) that have a project name
+    const openWithProject = tasks.filter(t => t.status === "open" && t.project);
+    const groups = new Map();
+    for (const t of openWithProject) {
+      if (!groups.has(t.project)) groups.set(t.project, []);
+      groups.get(t.project).push(t);
+    }
+    const projects = [...groups.entries()]
+      .map(([name, items]) => ({
+        name,
+        count: items.length,
+        nearest: items.map(i => i.deadline).filter(Boolean).sort()[0] || null,
+      }))
+      .sort((a, b) => {
+        // active projects with sooner deadlines first
+        if (a.nearest && b.nearest) return a.nearest.localeCompare(b.nearest);
+        if (a.nearest) return -1;
+        if (b.nearest) return 1;
+        return b.count - a.count;
+      });
+
+    const countEl = document.getElementById("projects-count");
+    countEl.textContent = `${projects.length} active`;
+    countEl.classList.toggle("zero", projects.length === 0);
+
+    const el = document.getElementById("projects-grid");
+    if (!projects.length) {
+      el.innerHTML = `<div class="empty">No active projects yet — sync will populate.</div>`;
+      return;
+    }
+
+    const allBtn = `<button class="project-card all ${!state.selectedProject ? "selected" : ""}" data-project="__all__">
+      <span class="name">All projects</span>
+      <div class="meta-row"><span class="count-pill">${projects.length} groups · ${openWithProject.length} items</span></div>
+    </button>`;
+
+    el.innerHTML = allBtn + projects.map(p => {
+      const dl = p.nearest ? deadlineLabel(p.nearest) : "no deadline";
+      const dlClass = p.nearest ? deadlineClass(p.nearest) : "later";
+      const selected = state.selectedProject === p.name ? "selected" : "";
+      return `<button class="project-card ${selected}" data-project="${escapeAttr(p.name)}">
+        <span class="name">${escapeHtml(p.name)}</span>
+        <div class="meta-row">
+          <span class="count-pill">${p.count} item${p.count === 1 ? "" : "s"}</span>
+          <span class="deadline ${dlClass}">${dl}</span>
+        </div>
+      </button>`;
+    }).join("");
+  }
+
+  function deadlineLabel(iso) {
+    const d = new Date(iso);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const days = Math.round((target - today) / 86400000);
+    if (days < 0) return `${Math.abs(days)}d overdue`;
+    if (days === 0) return "today";
+    if (days === 1) return "tomorrow";
+    if (days <= 3) return `in ${days}d`;
+    if (days <= 7) return d.toLocaleDateString([], { weekday: "short" });
+    return d.toLocaleDateString([], { month: "short", day: "numeric" });
+  }
+  function deadlineClass(iso) {
+    const d = new Date(iso);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const days = Math.round((target - today) / 86400000);
+    if (days < 0) return "overdue";
+    if (days <= 0) return "today";
+    if (days <= 3) return "soon";
+    return "later";
+  }
+
+  function updatePmHint() {
+    const hint = document.getElementById("pm-hint");
+    if (state.selectedProject) {
+      hint.innerHTML = `Filtered to <strong>${escapeHtml(state.selectedProject)}</strong>. <button class="clear-filter" data-action="clear-project">show all</button>`;
+    } else {
+      hint.textContent = "Open items across all projects.";
+    }
+  }
+
+  function selectProject(name) {
+    if (name === "__all__" || state.selectedProject === name) {
+      state.selectedProject = null;
+    } else {
+      state.selectedProject = name;
+    }
+    renderAll();
+    // scroll the project queue into view on mobile
+    if (window.innerWidth < 860 && state.selectedProject) {
+      document.getElementById("pm-list").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
   function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
   function escapeAttr(s) { return escapeHtml(s); }
 
@@ -833,7 +1013,11 @@
   });
   document.addEventListener("click", (ev) => {
     const del = ev.target.closest("[data-action='delete']");
-    if (del) { deleteTask(del.dataset.id); }
+    if (del) { deleteTask(del.dataset.id); return; }
+    const clear = ev.target.closest("[data-action='clear-project']");
+    if (clear) { state.selectedProject = null; renderAll(); return; }
+    const card = ev.target.closest(".project-card");
+    if (card) { selectProject(card.dataset.project); return; }
   });
   document.getElementById("add-btn").addEventListener("click", () => {
     const input = document.getElementById("new-task");
