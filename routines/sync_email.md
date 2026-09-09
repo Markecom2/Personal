@@ -1,7 +1,7 @@
-# Routine: hourly email → task sync
+# Routine: email → task sync
 
-**Fires**: every hour, 8:00–20:00 local, weekdays.
-**Purpose**: scan Mark's Zoho inbox for new action items, add them to the dashboard as tasks.
+**Fires**: every 5–10 minutes, 07:00–22:00 local, every day. (Was hourly; shortened so new tasks feel near-real-time and browser/Slack notifications land quickly.)
+**Purpose**: scan Mark's Zoho inbox for new action items, add them to the dashboard as tasks, and (optionally) ping Slack for each new task so notifications work when the dashboard isn't open.
 
 ## What to do
 
@@ -41,7 +41,16 @@
    ```json
    { "lastRunAt": "<ISO>", "kind": "email", "processed": <N>, "created": <N> }
    ```
-6. **Report**. One-line summary: `Scanned N emails, added M tasks, skipped K.` Do not narrate the individual decisions unless asked.
+
+6. **(Optional) Ping Slack for each new task**. If the Slack MCP is connected AND `meta/config` has `slackDmChannel` set, use `mcp__Slack__slack_send_message` to send one message per new task to that channel. Message shape:
+   ```
+   *🆕 <priority-emoji> <title>*
+   <why>
+   <project · deadline label> · <source>
+   ```
+   Where priority-emoji: `🔴` top, `🟡` mid, `⚪️` later. Deadline label is "today", "tomorrow", or the date. Skip this step entirely if `slackDmChannel` isn't set or Slack MCP is unavailable — do not fail the whole run.
+
+7. **Report**. One-line summary: `Scanned N emails, added M tasks, skipped K.` Do not narrate the individual decisions unless asked.
 
 ## Rules
 

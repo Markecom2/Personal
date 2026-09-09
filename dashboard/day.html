@@ -733,6 +733,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
     padding: 6px 0 0;
     font-family: var(--mono);
     font-size: 10px;
@@ -740,6 +741,7 @@
     letter-spacing: 0.05em;
     text-transform: uppercase;
   }
+  .status-left, .status-right { display: flex; align-items: center; gap: 12px; }
   .status-dot {
     display: inline-block;
     width: 6px; height: 6px;
@@ -749,6 +751,21 @@
     vertical-align: middle;
   }
   .status-dot.offline { background: var(--ink-faint); }
+  .notify-btn {
+    padding: 3px 8px;
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    color: var(--ink-mute);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .notify-btn:hover { color: var(--ink); border-color: var(--accent); }
+  .notify-btn.on { color: var(--accent); border-color: var(--accent); }
+  .notify-btn.blocked { color: var(--critical); border-color: var(--critical-soft); cursor: not-allowed; }
 
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
@@ -844,8 +861,13 @@
   </section>
 
   <div class="status-bar">
-    <div><span class="status-dot" id="conn-dot"></span><span id="conn-label">Connecting…</span></div>
-    <div id="last-sync">Last sync: —</div>
+    <div class="status-left">
+      <span><span class="status-dot" id="conn-dot"></span><span id="conn-label">Connecting…</span></span>
+    </div>
+    <div class="status-right">
+      <button class="notify-btn" id="notify-btn" title="Get a browser notification when new tasks land">🔔 Enable notifications</button>
+      <span id="last-sync">Last sync: —</span>
+    </div>
   </div>
 </div>
 
@@ -1342,6 +1364,126 @@
     document.getElementById("last-sync").textContent = `Last sync: ${d.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`;
   }
 
+  // ---- Notifications
+  const notifyBtn = document.getElementById("notify-btn");
+  const NOTIFY_KEY = "eod:notified-task-ids:v1";
+  const NOTIFY_ENABLED_KEY = "eod:notify-enabled:v1";
+  let notifyReady = false; // becomes true after first snapshot; prevents init flood
+  let notifiedIds = new Set();
+  try { notifiedIds = new Set(JSON.parse(localStorage.getItem(NOTIFY_KEY) || "[]")); }
+  catch (e) { notifiedIds = new Set(); }
+
+  function notifySupported() {
+    return typeof Notification !== "undefined";
+  }
+  function notifyEnabled() {
+    if (!notifySupported()) return false;
+    if (Notification.permission !== "granted") return false;
+    try { return localStorage.getItem(NOTIFY_ENABLED_KEY) === "1"; }
+    catch (e) { return true; }
+  }
+  function refreshNotifyButton() {
+    if (!notifySupported()) {
+      notifyBtn.textContent = "🔕 Not supported here";
+      notifyBtn.disabled = true;
+      return;
+    }
+    if (Notification.permission === "denied") {
+      notifyBtn.textContent = "🔕 Blocked in browser";
+      notifyBtn.classList.add("blocked");
+      notifyBtn.disabled = true;
+      return;
+    }
+    if (notifyEnabled()) {
+      notifyBtn.textContent = "🔔 Notifications on";
+      notifyBtn.classList.add("on");
+      notifyBtn.classList.remove("blocked");
+    } else {
+      notifyBtn.textContent = "🔔 Enable notifications";
+      notifyBtn.classList.remove("on", "blocked");
+    }
+  }
+  async function toggleNotify() {
+    if (!notifySupported() || Notification.permission === "denied") return;
+    if (notifyEnabled()) {
+      try { localStorage.setItem(NOTIFY_ENABLED_KEY, "0"); } catch (e) {}
+      refreshNotifyButton();
+      return;
+    }
+    if (Notification.permission !== "granted") {
+      const p = await Notification.requestPermission();
+      if (p !== "granted") { refreshNotifyButton(); return; }
+    }
+    try { localStorage.setItem(NOTIFY_ENABLED_KEY, "1"); } catch (e) {}
+    refreshNotifyButton();
+    // Confirmation ping so the user knows it works
+    try {
+      new Notification("Notifications enabled", {
+        body: "You'll get pinged when new tasks land in Mark's Day.",
+        tag: "eod-confirm",
+        silent: false,
+      });
+    } catch (e) { /* ignore */ }
+  }
+  notifyBtn.addEventListener("click", toggleNotify);
+  refreshNotifyButton();
+
+  function persistNotifiedIds() {
+    try {
+      // Cap at 500 entries to avoid unbounded growth
+      const arr = [...notifiedIds];
+      const trimmed = arr.slice(-500);
+      localStorage.setItem(NOTIFY_KEY, JSON.stringify(trimmed));
+      notifiedIds = new Set(trimmed);
+    } catch (e) { /* localStorage may be blocked */ }
+  }
+
+  function maybeNotifyNewTasks(freshTasks) {
+    // freshTasks are open tasks currently in the snapshot.
+    // On first snapshot: seed notifiedIds with everything, don't fire.
+    if (!notifyReady) {
+      notifyReady = true;
+      for (const t of freshTasks) notifiedIds.add(t.id);
+      persistNotifiedIds();
+      return;
+    }
+    if (!notifyEnabled()) return;
+    const brandNew = freshTasks.filter(t => !notifiedIds.has(t.id) && t.status === "open");
+    if (!brandNew.length) return;
+
+    for (const t of brandNew.slice(0, 5)) {
+      const bits = [];
+      if (t.project) bits.push(t.project);
+      if (t.deadline) bits.push(deadlineLabel(t.deadline));
+      if (t.priority === "top") bits.push("TOP");
+      const meta = bits.join(" · ");
+      const body = [meta, t.why].filter(Boolean).join("\n");
+      try {
+        const n = new Notification(t.title || "New task", {
+          body,
+          tag: `eod-task-${t.id}`,
+          renotify: false,
+        });
+        n.onclick = () => {
+          window.focus();
+          openPanel(t.id);
+          n.close();
+        };
+      } catch (e) { /* ignore */ }
+    }
+    if (brandNew.length > 5) {
+      try {
+        new Notification(`+${brandNew.length - 5} more new tasks`, {
+          body: "Open Mark's Day to see the rest.",
+          tag: "eod-more",
+        });
+      } catch (e) { /* ignore */ }
+    }
+
+    for (const t of brandNew) notifiedIds.add(t.id);
+    persistNotifiedIds();
+  }
+
   // ---- Detail panel
   const panel = document.getElementById("panel");
   const backdrop = document.getElementById("panel-backdrop");
@@ -1517,6 +1659,7 @@
       .onSnapshot((snap) => {
         state.tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderAll();
+        maybeNotifyNewTasks(state.tasks);
       }, (err) => {
         console.warn("tasks snapshot error", err);
         setConn(false, "Reconnecting…");
