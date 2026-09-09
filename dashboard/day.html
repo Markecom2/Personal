@@ -324,6 +324,17 @@
   .src.cal { color: var(--warn); border-color: var(--warn-soft); background: var(--warn-soft); }
   .src.pm { color: var(--ink); }
   .src.manual { color: var(--ink-mute); }
+  .src.slack {
+    color: #4a154b;
+    background: #f4ecf7;
+    border-color: #d9c7dc;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      .src.slack { color: #e3b6e6; background: #2b1f2c; border-color: #4b3450; }
+    }
+  }
+  :root[data-theme="dark"] .src.slack { color: #e3b6e6; background: #2b1f2c; border-color: #4b3450; }
   .src.whatsapp { color: var(--done); border-color: var(--accent-soft); }
 
   .project-tag {
