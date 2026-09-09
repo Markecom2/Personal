@@ -1,94 +1,81 @@
-# Daily EOD Planner
+# Mark's Day — daily operating dashboard
 
-Twice-daily briefing (morning + evening) that pulls **Zoho Calendar**, **Zoho Mail**,
-and a **custom MySQL PM tool**, has **Claude Haiku** rank what needs your attention,
-and renders a dashboard-style HTML page you can view as a Claude Artifact.
+A live, checkable dashboard for planning **start of day**, working through it, and
+**wrapping up at end of day**. It reads Mark's Zoho inbox continuously and
+converts action-worthy emails into tasks automatically. Task state syncs back to
+Zoho Personal Tasks so nothing lives only in one place.
 
-## Quick start
+**Live dashboard**: https://claude.ai/code/artifact/526731de-3797-4ccc-857e-b4e7e3107c6e
 
-```sh
-pip install -r requirements.txt
+## How it works
 
-# Preview with mock data (no external calls, no API key)
-python scripts/eod_planner.py --mode morning --mock --skip-llm
+Three moving parts:
 
-# Preview with Claude Haiku on mock data (needs ANTHROPIC_API_KEY)
-python scripts/eod_planner.py --mode morning --mock
+1. **The dashboard** (`dashboard/day.html`) — a Claude Artifact with a live task
+   database. Check a box → the task is marked done, the meter updates, and every
+   open view reloads. Add a task in the composer → it appears everywhere.
+   Persists via the Artifact `db` capability.
 
-# Run against real sources
-cp .env.example .env    # fill in real values
-python scripts/eod_planner.py --mode morning
-python scripts/eod_planner.py --mode evening
-```
+2. **Sync routines** (`routines/*.md`) — prompts fired by Claude Code Routines
+   on a schedule. Each routine wakes a Claude session that uses the Zoho MCP
+   server to fetch mail/calendar, decides what needs Mark's attention, and
+   writes into the dashboard's DB via the `Artifact write_db` action.
 
-Output lands in `daily/YYYY-MM-DD-{morning,evening}.html`.
+3. **Zoho** — source of truth for email, calendar, and durable task history
+   (Zoho Personal Tasks). The dashboard is the working surface; Zoho is the
+   long-lived record.
 
-## What to fill in (`.env`)
+## The three routines
 
-- **Zoho Mail (IMAP)** — email + app-specific password
-  (Zoho account → Security → App Passwords)
-- **Zoho Calendar (CalDAV)** — URL depends on your region:
-  - `.com` → `https://calendar.zoho.com/caldav`
-  - `.eu`  → `https://calendar.zoho.eu/caldav`
-  - `.in`  → `https://calendar.zoho.in/caldav`
-- **MySQL** — read-only credentials for the PM database.
-  Then edit the query in `scripts/lib/pm_db.py` (`DEFAULT_QUERY`) to match your
-  schema. The pipeline consumes `PMTask` objects; the SQL is the only place
-  schema knowledge lives.
-- **Anthropic** — `ANTHROPIC_API_KEY` for Haiku ranking. If missing, the
-  planner falls back to rules-based ranking (still readable, just less nuanced).
+| Routine | Fires | What it does |
+|---|---|---|
+| [`sod_brief.md`](routines/sod_brief.md) | Weekdays 08:00 | Loads today's calendar, ranks focus set (3 items), clears yesterday's done tasks. |
+| [`sync_email.md`](routines/sync_email.md) | Every hour, 08–20, weekdays | Scans inbox (last 7 days), extracts action items, adds them as tasks. Dedupes against already-seen messages. |
+| [`eod_wrap.md`](routines/eod_wrap.md) | Weekdays 18:00 | Mirrors completed tasks to Zoho Personal Tasks, writes a wrap-up summary, rolls unfinished focus items to tomorrow. |
 
-## Morning vs evening
+## Setup
 
-- **Morning** — today's calendar, priority tasks, emails from the last 36h.
-- **Evening** — tomorrow's calendar, still-open tasks, remaining emails.
+**Prerequisites**: the Zoho MCP server must be authorized in Claude Code
+(claude.ai → connectors → Zoho → connect). Once connected,
+`mcp__Zoho__ZohoMail_listEmails` and friends become callable from Claude Code
+sessions.
 
-The LLM is told which mode it's in and adjusts framing.
-
-## How the priority ranking works
-
-Claude Haiku receives your calendar + emails + tasks and returns JSON that
-buckets each item:
-
-- **Emails**: `respond_now` / `respond_today` / `fyi` / `skip`
-- **Tasks**: `top_focus` (max 3) / `important` / `later`
-
-The template renders each bucket in a distinct section. `skip` emails are
-dropped entirely; `later` tasks live in a collapsed `<details>`.
-
-## Scheduling twice-daily runs
-
-The intended runtime is **Claude Code Routines** — each firing wakes a Claude
-session that runs this script and publishes the HTML as an Artifact.
-
-Setup (once, in a Claude Code session):
+**Wire up the routines** (once):
 
 ```
-create a Routine that runs `python scripts/eod_planner.py --mode morning`
-every weekday at 8:00 AM ET, and another for `--mode evening` at 6:00 PM ET
+In a Claude Code session, ask:
+
+"Create a Claude Code Routine that fires the prompt in
+routines/sync_email.md every hour, Monday–Friday, 08:00–20:00 America/New_York."
+
+Repeat for sod_brief.md (weekdays 08:00) and eod_wrap.md (weekdays 18:00).
 ```
 
-## Layout
+Each routine reads its own prompt file and follows it — no other setup needed.
 
-```
-scripts/
-├── eod_planner.py        # CLI entry
-├── lib/
-│   ├── config.py         # .env loader
-│   ├── zoho_mail.py      # IMAP client
-│   ├── zoho_calendar.py  # CalDAV client
-│   ├── pm_db.py          # MySQL — edit DEFAULT_QUERY for your schema
-│   ├── summarizer.py     # Claude Haiku ranking + rules fallback
-│   └── render.py         # HTML assembly
-└── templates/
-    └── eod.html.j2       # Jinja template (light + dark mode)
-mocks/                    # calendar.json, emails.json, tasks.json for --mock
-daily/                    # generated HTML (git-ignored)
-```
+## Dashboard sections
 
-## CLI flags
+- **Today** — calendar events, with time-based highlight for "happening now"
+- **Focus** — the 3 things that matter most today (SOD ranks these)
+- **From email** — auto-extracted from the inbox scan
+- **Project queue** — open items from the PM tool (populated by an optional PM sync routine you can add)
+- **Later** — parked / non-urgent
+- **End of day** — done today, rolling-over counts, wrap summary
 
-- `--mode {morning,evening}` — required
-- `--mock` — read from `mocks/` instead of live sources
-- `--skip-llm` — deterministic rules-based ranking, no Claude API call
-- `--out PATH` — override the output path
+Keyboard: `A` focuses the add-task input; click any checkbox to clear a task.
+
+## Data shape (dashboard DB)
+
+- `tasks/<id>` — one doc per task: `{title, why?, source, priority, status, createdAt, completedAt?, emailId?, zohoSynced?}`
+- `events/<YYYY-MM-DD>/items/<id>` — today's calendar
+- `email_seen/<sanitized-message-id>` — dedupe log for email→task conversion
+- `wrap_ups/<YYYY-MM-DD>` — one EOD summary per day
+- `meta/sync` — last-run info, shown as "Last sync: …" in the dashboard footer
+
+## What's not here
+
+- No custom database. Zoho + Artifact DB is all the persistence there is.
+- No IMAP or CalDAV. The old plan used them; both were blocked by the sandbox
+  network policy. The Zoho MCP path is HTTPS and works from Claude Code sessions.
+- No standalone Python script. The old `scripts/` code is kept in
+  `scripts/legacy/` for reference, but nothing runs it any more.
