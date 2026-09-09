@@ -825,7 +825,7 @@
     tasksUnsub = db.collection("tasks")
       .orderBy("createdAt", "desc")
       .onSnapshot((snap) => {
-        state.tasks = snap.docs.map(d => ({ id: d.id, ...d.data }));
+        state.tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderAll();
       }, (err) => {
         console.warn("tasks snapshot error", err);
@@ -836,13 +836,13 @@
     eventsUnsub = db.collection(`events/${isoDay()}/items`)
       .orderBy("start")
       .onSnapshot((snap) => {
-        state.events = snap.docs.map(d => ({ id: d.id, ...d.data }));
+        state.events = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderAll();
       }, () => { /* ignore */ });
 
     // Subscribe to sync meta
     db.doc("meta/sync").onSnapshot((snap) => {
-      const data = snap.data;
+      const data = snap.exists ? snap.data() : null;
       if (data?.lastRunAt) setLastSync(data.lastRunAt);
     }, () => {});
   })();
