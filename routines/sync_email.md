@@ -10,10 +10,12 @@
 2. **Deduplicate against already-imported emails**. Read `email_seen/` collection from the dashboard DB (URL below) — each doc's ID is a Zoho message ID we've already processed. Skip those.
 
 3. **For each new message**, decide whether it requires action from Mark:
-   - **Yes** → extract a single crisp task title (imperative, ≤ 90 chars) and a one-line `why` (sender + what the ask is). Assign priority:
-     - `top`: explicit deadline in ≤ 48h, or high-value inbound (wholesale, partner, customer complaint from paying account)
-     - `mid`: reply expected within a few days, invoice due, decision needed
-     - `later`: FYI-with-followup, newsletters worth reading, low-stakes review
+   - **Yes** → extract a single crisp task title (imperative, ≤ 90 chars) and a one-line `why` (sender + what the ask is). Then classify:
+     - **`category`**: `project` (client delivery, integration work, campaign delivery — anything that has a client name or deliverable attached), `admin` (billing, subscriptions, access requests, HR), `security` (auth alerts, unusual sign-ins, breach notifications), `personal` (everything else).
+     - **`project`** (only when `category = "project"`): the client or product name — e.g. `"DFK ANZ"`, `"TGE × Resova integration"`, `"Perfect Travel Group"`. Keep it short (≤ 40 chars) and consistent across tasks that belong to the same effort.
+     - **`priority`**: `top` (explicit deadline in ≤ 48h, or high-value inbound — wholesale, partner, customer complaint from paying account), `mid` (reply expected within a few days, invoice due, decision needed), `later` (FYI-with-followup, newsletters worth reading, low-stakes review).
+     - **`deadline`** (ISO date `YYYY-MM-DD`): extract from the email body when explicit ("by Friday", "before EOD Tuesday", "due 15 Sep"). If implicit (a colleague blocked, waiting on your reply), infer a reasonable one — same day for urgent unblocks, ≤3 days for warm inbounds, end of week for lower stakes. Leave omitted only when there truly is no time signal.
+     - **`deadlineText`** (optional): the raw phrase from the email if `deadline` was inferred — helps Mark trust or override the guess.
    - **No** (newsletter with no action, automated report Mark reads passively, marketing, spam) → skip.
 4. **Write results**. Use `Artifact` tool with `action: "write_db"`, `db_op: "batch"`, `url` below.
    For each new task: `set` at `tasks/msg_<zoho-message-id>` with:
@@ -22,7 +24,11 @@
      "title": "...",
      "why": "From: <sender>. <one-line ask>",
      "source": "email",
+     "category": "project|admin|security|personal",
+     "project": "<client/product name, if category=project>",
      "priority": "top|mid|later",
+     "deadline": "YYYY-MM-DD",
+     "deadlineText": "<raw phrase, if inferred>",
      "status": "open",
      "createdAt": "<ISO timestamp>",
      "emailId": "<zoho-message-id>",

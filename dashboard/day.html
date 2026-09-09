@@ -324,6 +324,33 @@
   .src.cal { color: var(--warn); border-color: var(--warn-soft); background: var(--warn-soft); }
   .src.pm { color: var(--ink); }
   .src.manual { color: var(--ink-mute); }
+  .src.whatsapp { color: var(--done); border-color: var(--accent-soft); }
+
+  .project-tag {
+    padding: 2px 6px;
+    border-radius: 2px;
+    background: transparent;
+    color: var(--ink-mute);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid var(--rule);
+  }
+
+  .deadline {
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .deadline.overdue { background: var(--critical-soft); color: var(--critical); border: 1px solid var(--critical); }
+  .deadline.today   { background: var(--critical-soft); color: var(--critical); }
+  .deadline.soon    { background: var(--warn-soft); color: var(--warn); }
+  .deadline.later   { background: var(--surface-sunk); color: var(--ink-mute); border: 1px solid var(--rule); }
 
   .task.priority-top { border-left: 3px solid var(--critical); }
   .task.priority-mid { border-left: 3px solid var(--warn); }
@@ -635,10 +662,14 @@
     const events = state.events.length ? state.events : EXAMPLES.events;
 
     renderCalendar(events);
-    renderTaskList("focus-list", tasks.filter(t => t.status === "open" && t.priority === "top"), "focus-count", "No focus set yet — sync will populate.");
-    renderTaskList("email-list", tasks.filter(t => t.status === "open" && t.source === "email" && t.priority !== "top"), "email-count", "Inbox is quiet.");
-    renderTaskList("pm-list", tasks.filter(t => t.status === "open" && t.source === "pm" && t.priority !== "top"), "pm-count", "No open project items.");
-    renderTaskList("later-list", tasks.filter(t => t.status === "open" && t.priority === "later" && t.source !== "email" && t.source !== "pm"), "later-count", "Nothing parked.");
+    const focus = tasks.filter(t => t.status === "open" && t.priority === "top").sort(byDeadline);
+    const project = tasks.filter(t => t.status === "open" && t.category === "project" && t.priority !== "top").sort(byDeadline);
+    const email = tasks.filter(t => t.status === "open" && t.source === "email" && t.category !== "project" && t.priority !== "top").sort(byDeadline);
+    const later = tasks.filter(t => t.status === "open" && t.priority === "later" && t.category !== "project" && t.source !== "email");
+    renderTaskList("focus-list", focus, "focus-count", "No focus set yet — sync will populate.");
+    renderTaskList("email-list", email, "email-count", "Inbox is quiet.");
+    renderTaskList("pm-list", project, "pm-count", "No open project items.");
+    renderTaskList("later-list", later, "later-count", "Nothing parked.");
 
     const doneToday = tasks.filter(t => t.status === "done" && sameDay(t.completedAt));
     renderTaskList("done-list", doneToday, null, "Nothing marked done yet today.");
@@ -704,6 +735,8 @@
     const done = t.status === "done" ? "done" : "";
     const ex = t.example ? `<span class="example-pill">example</span>` : "";
     const why = t.why ? `<div class="why">${escapeHtml(t.why)}</div>` : "";
+    const proj = t.project ? `<span class="project-tag">${escapeHtml(t.project)}</span>` : "";
+    const dl = renderDeadline(t.deadline, t.deadlineText);
     return `<div class="task ${pri} ${done}" data-id="${escapeAttr(t.id)}">
       <input class="box" type="checkbox" ${t.status === "done" ? "checked" : ""} data-id="${escapeAttr(t.id)}" aria-label="Mark done">
       <div class="body">
@@ -711,12 +744,40 @@
         ${why}
       </div>
       <div class="meta">
+        ${dl}
+        ${proj}
         <span class="src ${t.source || "manual"}">${(t.source || "manual")}</span>
         <div class="row-actions">
           <button class="icon-btn danger" data-action="delete" data-id="${escapeAttr(t.id)}" title="Delete">×</button>
         </div>
       </div>
     </div>`;
+  }
+
+  function renderDeadline(iso, text) {
+    if (!iso && !text) return "";
+    if (!iso) return `<span class="deadline later">${escapeHtml(text)}</span>`;
+    const d = new Date(iso);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const days = Math.round((target - today) / 86400000);
+    let cls, label;
+    if (days < 0)      { cls = "overdue"; label = `${Math.abs(days)}d overdue`; }
+    else if (days === 0) { cls = "today"; label = "today"; }
+    else if (days === 1) { cls = "soon"; label = "tomorrow"; }
+    else if (days <= 3)  { cls = "soon"; label = `in ${days}d`; }
+    else if (days <= 7)  { cls = "later"; label = `${d.toLocaleDateString([], { weekday: "short" })}`; }
+    else                 { cls = "later"; label = d.toLocaleDateString([], { month: "short", day: "numeric" }); }
+    return `<span class="deadline ${cls}" title="${escapeAttr(iso)}">${label}</span>`;
+  }
+
+  function byDeadline(a, b) {
+    // No deadline sorts last; earliest first
+    if (!a.deadline && !b.deadline) return 0;
+    if (!a.deadline) return 1;
+    if (!b.deadline) return -1;
+    return a.deadline.localeCompare(b.deadline);
   }
 
   function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
