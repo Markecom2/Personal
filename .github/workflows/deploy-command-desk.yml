@@ -1,0 +1,95 @@
+# Push to main (changes under command-desk/server) → syncs the app to the CloudPanel site over SSH →
+# installs dependencies → restarts it with pm2 → checks /healthz. Same pattern as giftsync.
+# .env, data/ (saved state) and .well-known/ (SSL renewals) on the server are never overwritten or deleted.
+# Actions → Deploy Command Desk → Run workflow with "dry run" ticked shows what would change, touching nothing.
+name: Deploy Command Desk
+
+on:
+  push:
+    branches: [main]
+    paths: ["command-desk/server/**", ".github/workflows/deploy-command-desk.yml"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run – show what would change and how the app runs, change nothing
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-command-desk
+  cancel-in-progress: false
+
+env:
+  TARGET: ${{ secrets.DESK_SSH_USER }}@${{ secrets.DESK_SSH_HOST }}
+  APP_DIR: ${{ secrets.DESK_APP_DIR }}
+  PORT: ${{ secrets.DESK_SSH_PORT || '22' }}
+  DESK_URL: ${{ vars.DESK_URL }}
+  DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+  # CloudPanel installs node/pm2 via nvm, which non-interactive SSH doesn't load on its own
+  NVM: export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh";
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: command-desk/server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Syntax check
+        run: npm run -s check
+
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.DESK_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DESK_SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Check target directory
+        run: |
+          # Refuse to deploy unless APP_DIR really is this app (guards rsync --delete against a wrong path).
+          # First deploy: create APP_DIR/.env on the server and copy package.json there by hand (see README).
+          ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes -o BatchMode=yes -p "$PORT" "$TARGET" \
+            "test -f '$APP_DIR/.env' && grep -q '\"name\": \"command-desk\"' '$APP_DIR/package.json'" \
+            || { echo "::error::APP_DIR is not the Command Desk app (no .env or wrong package.json), or SSH login failed"; exit 1; }
+
+      - name: Show how the app runs
+        if: env.DRY_RUN
+        run: |
+          ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes -o BatchMode=yes -p "$PORT" "$TARGET" "
+            $NVM
+            echo '== node / pm2'; command -v node pm2; node -v
+            echo '== pm2 list'; pm2 list 2>&1 || echo 'pm2 not available'
+          "
+
+      - name: Sync files
+        run: |
+          rsync -az --delete --itemize-changes ${DRY_RUN:+--dry-run} \
+            --exclude='.env' --exclude='.env.*' --exclude='data/' --exclude='node_modules/' --exclude='.well-known/' \
+            -e "ssh -i $HOME/.ssh/id_deploy -o IdentitiesOnly=yes -o BatchMode=yes -p $PORT" \
+            ./ "$TARGET:$APP_DIR/"
+
+      - name: Install and restart
+        if: ${{ !env.DRY_RUN }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes -o BatchMode=yes -p "$PORT" "$TARGET" \
+            "$NVM cd '$APP_DIR' && npm ci --omit=dev --no-audit --no-fund && (pm2 restart command-desk --update-env || pm2 start ecosystem.config.cjs) && pm2 save"
+
+      - name: Health check
+        if: ${{ !env.DRY_RUN }}
+        run: |
+          [ -n "$DESK_URL" ] || { echo "::warning::Set the DESK_URL repository variable to enable the health check"; exit 0; }
+          for i in 1 2 3 4 5 6; do
+            curl -fsS "$DESK_URL/healthz" && exit 0
+            sleep 5
+          done
+          echo "Health check failed" && exit 1

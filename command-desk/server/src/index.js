@@ -1,5 +1,6 @@
 // Command Desk server: fetches Zoho, Slack and Monday on a schedule, asks Claude to triage,
 // and serves a password-protected dashboard that can draft and send replies.
+import "./env.js";
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

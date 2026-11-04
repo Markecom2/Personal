@@ -6,26 +6,53 @@ sends back to the right place.
 
 | Folder | What it is |
 |---|---|
-| `server/` | The hosted version: Node.js app with a login page. Fetches every hour and re-plans with Claude, even when nobody has it open. |
+| `server/` | The hosted version for CloudPanel: Node.js app with a login page. Fetches every hour and re-plans with Claude, even when nobody has it open. |
 | `artifact.html` | The claude.ai artifact version (https://claude.ai/artifact/Y8jo3pGAqTFY6ieQKNjvy1). Uses your claude.ai connectors, only refreshes while open. |
 
-## Deploy on Render (about 30 minutes, mostly collecting keys)
+## Deploy on CloudPanel (same setup as giftsync)
 
-1. **Collect the keys** (details below): Anthropic API key, Zoho client ID/secret/refresh token, Slack user token,
-   one Monday API token per account.
-2. **Make your password hash** on any machine with Node 20+:
+**One-time setup on the server**
+
+1. **Create the site.** CloudPanel → Sites → Add Site → **Create a Node.js Site**:
+   - Domain: e.g. `desk.ecommerceally.com` (add an A record pointing at the server's IP first)
+   - Node.js version: 22 · App Port: `3010` (any free port)
+   - Note the **site user** and its password. The app folder is `/home/<site-user>/htdocs/desk.ecommerceally.com`.
+2. **SSL.** Site → SSL/TLS → Actions → **New Let's Encrypt Certificate**.
+3. **SSH in as the site user** (CloudPanel → Site → Settings shows SSH details) and run:
    ```bash
-   cd command-desk/server && npm install && npm run hash-password -- 'choose-a-long-password'
+   cd ~/htdocs/desk.ecommerceally.com
+   git clone --depth 1 -b main https://github.com/Markecom2/personal /tmp/desk && cp -r /tmp/desk/command-desk/server/. . && rm -rf /tmp/desk
+   cp .env.example .env && nano .env        # fill in the keys (see "Getting each key")
+   npm ci --omit=dev
+   npm run hash-password -- 'choose-a-long-password'   # paste the scrypt$... line into DASH_PASSWORD_HASH in .env
+   openssl rand -hex 32                                 # paste into SESSION_SECRET in .env
+   npm install -g pm2 && pm2 start ecosystem.config.cjs && pm2 save
    ```
-   Copy the `scrypt$...` line it prints.
-3. In Render: **New → Blueprint**, pick the `markecom2/personal` repo and the branch. Render reads `render.yaml`
-   and creates the `command-desk` service (Starter plan, about $7/month, with a 1 GB disk for saved state).
-4. Fill in the secret values it asks for: `DASH_PASSWORD_HASH`, `ANTHROPIC_API_KEY`, the three `ZOHO_*` values,
-   `SLACK_USER_TOKEN`, `MONDAY_ACCOUNTS`. `SESSION_SECRET` is generated for you.
-5. Deploy. Your dashboard is at `https://command-desk-XXXX.onrender.com`. Sign in with your password.
+   Open `https://desk.ecommerceally.com` and sign in.
+4. **Keep pm2 running after a reboot:** run `pm2 startup` as the site user and, if it prints a `sudo ...`
+   command, have it run as root once. (Or add `@reboot cd ~/htdocs/desk.ecommerceally.com && pm2 resurrect`
+   under the site's Cron Jobs in CloudPanel.)
+
+**Automatic deploys from GitHub** (`.github/workflows/deploy-command-desk.yml`)
+
+Every push to `main` that changes `command-desk/server/` syncs the files over SSH, runs `npm ci`, restarts the
+app with pm2 and checks `/healthz`. `.env` and `data/` on the server are never touched. To switch it on, add
+these in GitHub → `markecom2/personal` → Settings → Secrets and variables → Actions (environment `production`):
+
+| Secret | Value |
+|---|---|
+| `DESK_SSH_HOST` | the server's IP or hostname |
+| `DESK_SSH_USER` | the site user from step 1 |
+| `DESK_SSH_PORT` | only if SSH isn't on 22 |
+| `DESK_SSH_PRIVATE_KEY` | a deploy key whose public half is in the site user's `~/.ssh/authorized_keys` |
+| `DESK_SSH_KNOWN_HOSTS` | output of `ssh-keyscan -p 22 <server>` |
+| `DESK_APP_DIR` | `/home/<site-user>/htdocs/desk.ecommerceally.com` |
+
+Variable: `DESK_URL` = `https://desk.ecommerceally.com` (for the health check). Run the workflow once with
+**dry run** ticked to see what it would change before the first real deploy.
 
 The badges at the top of the dashboard show each source as green, amber (not set up) or red (with the error),
-so you can add sources one at a time.
+so you can add keys to `.env` one at a time; run `pm2 restart command-desk` after editing `.env`.
 
 ## Getting each key
 
@@ -60,9 +87,9 @@ MONDAY_ACCOUNTS=[{"label":"VenueScale","token":"...","boards":[5024056553]},{"la
 
 ```bash
 cd command-desk/server
-cp .env.example .env   # fill it in
+cp .env.example .env   # fill it in, set PORT=3000 and NODE_ENV=development
 npm install
-node --env-file=.env src/index.js
+npm start
 ```
 Open http://localhost:3000.
 
