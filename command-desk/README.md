@@ -18,17 +18,14 @@ sends back to the right place.
    - Node.js version: 22 · App Port: `3010` (any free port)
    - Note the **site user** and its password. The app folder is `/home/<site-user>/htdocs/desk.ecommerceally.com`.
 2. **SSL.** Site → SSL/TLS → Actions → **New Let's Encrypt Certificate**.
-3. **SSH in as the site user** (CloudPanel → Site → Settings shows SSH details) and run:
-   ```bash
-   cd ~/htdocs/desk.ecommerceally.com
-   git clone --depth 1 -b main https://github.com/Markecom2/personal /tmp/desk && cp -r /tmp/desk/command-desk/server/. . && rm -rf /tmp/desk
-   cp .env.example .env && nano .env        # fill in the keys (see "Getting each key")
-   npm ci --omit=dev
-   npm run hash-password -- 'choose-a-long-password'   # paste the scrypt$... line into DASH_PASSWORD_HASH in .env
-   openssl rand -hex 32                                 # paste into SESSION_SECRET in .env
-   npm install -g pm2 && pm2 start ecosystem.config.cjs && pm2 save
-   ```
-   Open `https://desk.ecommerceally.com` and sign in.
+3. **Put the settings file in place.** In CloudPanel → Site → **File Manager**, inside
+   `htdocs/desk.ecommerceally.com`:
+   - upload `command-desk/server/package.json` from the repo (the deploy checks for it, so it can never sync into the wrong folder);
+   - create `.env` from `command-desk/server/.env.example` and fill in the keys (see "Getting each key").
+     For `DASH_PASSWORD_HASH`, run `npm run hash-password -- 'choose-a-long-password'` on any machine with
+     Node 22 and the repo; for `SESSION_SECRET`, any 64 random hex characters (`openssl rand -hex 32`).
+   Then set up the GitHub secrets below and run **Actions → Deploy Command Desk → Run workflow**. The first run
+   uploads the app, installs pm2 if needed and starts it. Open `https://desk.ecommerceally.com` and sign in.
 4. **Keep pm2 running after a reboot:** run `pm2 startup` as the site user and, if it prints a `sudo ...`
    command, have it run as root once. (Or add `@reboot cd ~/htdocs/desk.ecommerceally.com && pm2 resurrect`
    under the site's Cron Jobs in CloudPanel.)
