@@ -1,0 +1,42 @@
+# Render Blueprint for Command Desk. In Render: New → Blueprint → pick this repo.
+# The "starter" plan is needed: free services sleep, which stops the hourly refresh, and have no disk.
+services:
+  - type: web
+    name: command-desk
+    runtime: node
+    plan: starter
+    rootDir: command-desk/server
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    disk:
+      name: command-desk-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /var/data
+      - key: TIMEZONE
+        value: Asia/Kolkata
+      - key: WORK_HOURS
+        value: "7-21"
+      - key: REFRESH_MINUTES
+        value: "60"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DASH_PASSWORD_HASH
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ZOHO_CLIENT_ID
+        sync: false
+      - key: ZOHO_CLIENT_SECRET
+        sync: false
+      - key: ZOHO_REFRESH_TOKEN
+        sync: false
+      - key: SLACK_USER_TOKEN
+        sync: false
+      - key: MONDAY_ACCOUNTS
+        sync: false

@@ -1,0 +1,18 @@
+{
+  "name": "command-desk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mark's Command Desk: Zoho Mail, Slack and Monday.com in one urgency-ranked dashboard with Claude-written plans.",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/index.js",
+    "check": "node --check src/index.js && node --check src/store.js && node --check src/auth.js && node --check src/claude.js && node --check src/sources/zoho.js && node --check src/sources/slack.js && node --check src/sources/monday.js",
+    "hash-password": "node src/auth.js hash"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.1.0",
+    "express": "4.21.2"
+  }
+}
