@@ -50,12 +50,22 @@ async function refresh() {
         }
       } else sources.push({ icon: "email", label: "Zoho", state: "err", txt: "problem", note: accts.error });
     } else sources.push({ icon: "email", label: "Zoho", state: "warn", txt: "not set up", note: "Add the Zoho keys to the server settings to load mail." });
-    // Slack
-    if (slack.enabled()) {
-      const r = await settle("Slack", "slack", slack.recentMessages);
-      if (r.ok) { live.slack = r.value; sources.push({ icon: "slack", label: "Slack", state: "ok", txt: `${r.value.length} in 24h` }); }
-      else sources.push({ icon: "slack", label: "Slack", state: "err", txt: "problem", note: r.error });
-    } else sources.push({ icon: "slack", label: "Slack", state: "warn", txt: "not set up", note: "Add SLACK_USER_TOKEN to the server settings to load Slack." });
+    // Slack: every account in SLACK_ACCOUNTS (or the single SLACK_USER_TOKEN)
+    let slackAccts = [];
+    try { slackAccts = slack.accounts(); } catch (e) { sources.push({ icon: "slack", label: "Slack", state: "err", txt: "problem", note: e.message }); }
+    if (!slackAccts.length && !sources.some((x) => x.icon === "slack")) sources.push({ icon: "slack", label: "Slack", state: "warn", txt: "not set up", note: "Add SLACK_ACCOUNTS to the server settings to load Slack." });
+    const several = slackAccts.length > 1, slackItems = [];
+    for (const a of slackAccts) {
+      const label = several ? "Slack · " + a.label : "Slack";
+      const r = await settle("Slack " + a.label, "slack", () => slack.recentMessages(a, several));
+      if (r.ok) { slackItems.push(...r.value); sources.push({ icon: "slack", label, state: "ok", txt: `${r.value.length} in 24h` }); }
+      else {
+        // keep last good data for this account
+        slackItems.push(...live.slack.filter((m) => m.server === a.label));
+        sources.push({ icon: "slack", label, state: "err", txt: "problem", note: r.error });
+      }
+    }
+    live.slack = slackItems;
     // Monday: every account in MONDAY_ACCOUNTS
     let accts = [];
     try { accts = monday.accounts(); } catch (e) { sources.push({ icon: "monday", label: "Monday", state: "err", txt: "problem", note: e.message }); }
