@@ -103,7 +103,8 @@ the-great-escape-gang): click your avatar → **Developers** → **My access tok
 ```
 MONDAY_ACCOUNTS=[{"label":"VenueScale","token":"...","boards":[5024056553]},{"label":"Mood Creative","token":"..."},{"label":"The Great Escape","token":"..."}]
 ```
-`boards` is optional; without it the four boards you used most recently are read.
+`boards` is optional; without it the four boards you used most recently are read. Mood Creative is the exception:
+it reads every active board and shows only tasks assigned to the owner of its token.
 
 ## Running locally
 

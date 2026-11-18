@@ -100,10 +100,12 @@ export function requireAuth(req, res, next) {
 function loginPage(failed, msg) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Command Desk · Sign in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cabin:wght@400;500;600;700&display=swap">
 <style>
 :root{--bg:#f4f6f8;--s:#fff;--ink:#121620;--m:#5d6676;--line:#dde2e8;--a:#0f766e;--c:#c8302c}
 @media (prefers-color-scheme:dark){:root{--bg:#0d1016;--s:#151922;--ink:#e9edf4;--m:#9ba4b6;--line:#2a3140;--a:#3cc7b5;--c:#ff7a72;color-scheme:dark}}
-body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:16px;box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:15px/1.5 "Cabin",system-ui,-apple-system,"Segoe UI",sans-serif;padding:16px;box-sizing:border-box}
 form{background:var(--s);border:1px solid var(--line);border-radius:16px;padding:28px;width:min(360px,100%);display:grid;gap:14px}
 h1{margin:0;font-size:22px}p{margin:0;color:var(--m);font-size:14px}
 input{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}

@@ -6,28 +6,58 @@ let client = null;
 export const enabled = () => !!(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
 const api = () => (client ||= new Anthropic());
 
-async function ask(prompt, { effort, maxTokens }) {
-  const res = await api().beta.messages.create({
+const text = { type: "string" };
+const list = (items) => ({ type: "array", items });
+const object = (properties) => ({ type: "object", properties, required: Object.keys(properties), additionalProperties: false });
+const TRIAGE_SCHEMA = object({
+  headline: text,
+  items: list(object({
+    id: text,
+    urgency: { type: "string", enum: ["critical", "high", "normal", "low", "fyi"] },
+    title: text,
+    client: text,
+    why: text,
+    plan: list(text),
+    replyNeeded: { type: "boolean" },
+    abcde: { type: "string", enum: ["A", "B", "C", "D", "E"] },
+    delegateTo: text
+  })),
+  frog: object({ id: text, why: text, firstStep: text }),
+  dayPlan: list(object({ slot: text, focus: text, ids: list(text) }))
+});
+const TRIAGE_ATTEMPTS = 2;
+
+// A plan that came back unusable. Worth one more try; API errors are already retried by the SDK.
+class PlanRetry extends Error {}
+
+async function ask(prompt, { effort, maxTokens, schema }) {
+  const res = await api().beta.messages.stream({
     model: MODEL,
     max_tokens: maxTokens,
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
-    output_config: { effort },
+    output_config: { effort, ...(schema ? { format: { type: "json_schema", schema } } : {}) },
     messages: [{ role: "user", content: prompt }]
-  });
+  }).finalMessage();
   if (res.stop_reason === "refusal") throw new Error("Claude declined this request.");
-  const text = res.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
-  if (!text) throw new Error(res.stop_reason === "max_tokens" ? "Claude's answer was cut off." : "Claude returned no text.");
-  return text;
+  if (schema && res.stop_reason === "max_tokens") throw new PlanRetry("Claude's plan was cut off.");
+  const answer = res.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
+  if (!answer) throw new Error(res.stop_reason === "max_tokens" ? "Claude's answer was cut off." : "Claude returned no text.");
+  return answer;
 }
 
-function parseJson(text) {
-  try { return JSON.parse(text); } catch { /* try fenced or embedded */ }
-  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fence) { try { return JSON.parse(fence[1]); } catch { /* fall through */ } }
-  const a = text.indexOf("{"), b = text.lastIndexOf("}");
-  if (a >= 0 && b > a) return JSON.parse(text.slice(a, b + 1));
-  throw new Error("Claude's plan was not valid JSON.");
+// Keeps only references to items that really exist, so a bad id can't reach the dashboard.
+function readPlan(answer, knownIds) {
+  let plan;
+  try { plan = JSON.parse(answer); } catch { throw new PlanRetry("Claude's plan was not valid JSON."); }
+  if (!plan || !Array.isArray(plan.items) || !Array.isArray(plan.dayPlan)) throw new PlanRetry("Claude's plan was incomplete.");
+  const items = plan.items.filter((i) => knownIds.has(i.id));
+  if (!items.length) throw new PlanRetry("Claude's plan had no matching items.");
+  return {
+    ...plan, items,
+    frog: plan.frog && knownIds.has(plan.frog.id) ? plan.frog : null,
+    dayPlan: plan.dayPlan.map((b) => ({ ...b, ids: (b.ids || []).filter((id) => knownIds.has(id)) }))
+  };
 }
 
 export async function triage(items, tz, plannerTasks = []) {
@@ -50,10 +80,16 @@ export async function triage(items, tz, plannerTasks = []) {
     `Also sort the actionable items with Brian Tracy's ABCDE method (Eat That Frog): "A" = must do, serious consequences if not done; "B" = should do, mild consequences; "C" = nice to do, no consequences; "D" = delegate to someone else (say to whom, e.g. Sorav or Jhanvi for dev work); "E" = eliminate (no action). Give every item a letter.\n` +
     `Pick ONE frog: the single A task that will have the greatest positive impact on Mark's results if done first today (the hardest, most important one, not the quickest). Own tasks Mark typed himself count too. Give its first concrete step, so he can start immediately.\n` +
     `Then build a day plan of 3-6 time blocks using real clock times from now until evening in ${tz} (e.g. "14:00-14:30") that sequences the work Eat-That-Frog style: the frog in the first block of the day before email and Slack, 60-90 minute single-task blocks, messages batched into one or two blocks, D items handed off early.\n\n` +
-    `Reply with ONLY JSON of this shape:\n{"headline":"one sentence on what matters most today","items":[{"id":"...","urgency":"critical|high|normal|low|fyi","title":"<=80 chars, action-first","client":"","why":"one sentence","plan":["step"],"replyNeeded":true,"abcde":"A","delegateTo":""}],"frog":{"id":"...","why":"one sentence","firstStep":"one concrete action"},"dayPlan":[{"slot":"14:00-14:30","focus":"...","ids":["..."]}]}\n\nITEMS:\n${lines}` + (own ? `\n\nMARK'S OWN TASKS (ids start with p:):\n${own}` : "");
-  const out = parseJson(await ask(prompt, { effort: "medium", maxTokens: 16000 }));
-  if (!out || !Array.isArray(out.items)) throw new Error("Claude's plan was missing items.");
-  return out;
+    `Write "headline" as one sentence on what matters most today. For each item, keep "title" to 80 characters and action-first, and write "why" as one sentence. Use an empty string for "client" or "delegateTo" when they don't apply, and an empty list for "plan" on low and fyi items. Use the exact ids given below.\n\nITEMS:\n${lines}` + (own ? `\n\nMARK'S OWN TASKS (ids start with p:):\n${own}` : "");
+  const knownIds = new Set([...items.map((i) => i.key), ...plannerTasks.map((t) => t.id)]);
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return readPlan(await ask(prompt, { effort: "medium", maxTokens: 32000, schema: TRIAGE_SCHEMA }), knownIds);
+    } catch (e) {
+      if (!(e instanceof PlanRetry) || attempt >= TRIAGE_ATTEMPTS) throw e;
+      console.warn(`[Claude] ${e.message} Trying again.`);
+    }
+  }
 }
 
 export async function draft(item, instruction) {
