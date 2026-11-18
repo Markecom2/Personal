@@ -1,0 +1,110 @@
+# Push to the default branch (changes under command-desk/server) → writes .env from the DESK_ENV_FILE secret → syncs the app to the CloudPanel site over SSH →
+# installs dependencies → restarts it with pm2 → checks /healthz. Same pattern as giftsync.
+# .env, data/ (saved state) and .well-known/ (SSL renewals) on the server are never overwritten or deleted.
+# Actions → Deploy Command Desk → Run workflow with "dry run" ticked shows what would change, touching nothing.
+name: Deploy Command Desk
+
+on:
+  push:
+    branches: [main, claude/daily-eod-planning-gna653]
+    paths: ["command-desk/server/**", ".github/workflows/deploy-command-desk.yml"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run – show what would change and how the app runs, change nothing
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-command-desk
+  cancel-in-progress: false
+
+env:
+  TARGET: ${{ secrets.DESK_SSH_USER }}@${{ secrets.DESK_SSH_HOST }}
+  APP_DIR: ${{ secrets.DESK_APP_DIR }}
+  PORT: ${{ secrets.DESK_SSH_PORT || '22' }}
+  DESK_URL: ${{ vars.DESK_URL }}
+  DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+  # CloudPanel installs node/pm2 via nvm, which non-interactive SSH doesn't load on its own
+  NVM: export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh";
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: command-desk/server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Syntax check
+        run: npm run -s check
+
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.DESK_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DESK_SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Check target directory
+        run: |
+          # Refuse to deploy unless APP_DIR is this app, or a fresh CloudPanel site folder with nothing of
+          # another app in it (guards rsync --delete against a wrong path).
+          ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes -o BatchMode=yes -p "$PORT" "$TARGET" "
+            test -d '$APP_DIR' || { echo 'APP_DIR does not exist'; exit 1; }
+            if [ -f '$APP_DIR/package.json' ]; then grep -q '\"name\": \"command-desk\"' '$APP_DIR/package.json' || { echo 'APP_DIR holds another app'; exit 1; }
+            else others=\$(ls -A '$APP_DIR' | grep -v -x -e .well-known -e .env -e .user.ini -e index.html -e index.php -e data); [ -z \"\$others\" ] || { echo \"APP_DIR is not empty: \$others\"; exit 1; }; fi
+          " || { echo "::error::APP_DIR check failed, or SSH login failed"; exit 1; }
+
+      - name: Write .env from the DESK_ENV_FILE secret
+        if: ${{ !env.DRY_RUN }}
+        env:
+          ENV_FILE: ${{ secrets.DESK_ENV_FILE }}
+        run: |
+          if [ -z "$ENV_FILE" ]; then
+            ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes -o BatchMode=yes -p "$PORT" "$TARGET" "test -f '$APP_DIR/.env'" \
+              || { echo "::error::No DESK_ENV_FILE secret and no .env on the server"; exit 1; }
+            echo "Keeping the server's existing .env"; exit 0
+          fi
+          printf '%s\n' "$ENV_FILE" | ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes -o BatchMode=yes -p "$PORT" "$TARGET" \
+            "umask 077 && cat > '$APP_DIR/.env.tmp' && mv '$APP_DIR/.env.tmp' '$APP_DIR/.env'"
+
+      - name: Show how the app runs
+        if: env.DRY_RUN
+        run: |
+          ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes -o BatchMode=yes -p "$PORT" "$TARGET" "
+            $NVM
+            echo '== node / pm2'; command -v node pm2; node -v
+            echo '== pm2 list'; pm2 list 2>&1 || echo 'pm2 not available'
+          "
+
+      - name: Sync files
+        run: |
+          rsync -az --delete --itemize-changes ${DRY_RUN:+--dry-run} \
+            --exclude='.env' --exclude='.env.tmp' --exclude='/data/' --exclude='/index.html' --exclude='/index.php' --exclude='/.user.ini' --exclude='node_modules/' --exclude='.well-known/' \
+            -e "ssh -i $HOME/.ssh/id_deploy -o IdentitiesOnly=yes -o BatchMode=yes -p $PORT" \
+            ./ "$TARGET:$APP_DIR/"
+
+      - name: Install and restart
+        if: ${{ !env.DRY_RUN }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes -o BatchMode=yes -p "$PORT" "$TARGET" \
+            "$NVM cd '$APP_DIR' && npm ci --omit=dev --no-audit --no-fund && (command -v pm2 >/dev/null || npm install -g pm2) && (pm2 restart command-desk --update-env || pm2 start ecosystem.config.cjs) && pm2 save"
+
+      - name: Health check
+        if: ${{ !env.DRY_RUN }}
+        run: |
+          [ -n "$DESK_URL" ] || { echo "::warning::Set the DESK_URL repository variable to enable the health check"; exit 0; }
+          for i in 1 2 3 4 5 6; do
+            curl -fsS "$DESK_URL/healthz" && exit 0
+            sleep 5
+          done
+          echo "Health check failed" && exit 1
