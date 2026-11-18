@@ -56,6 +56,7 @@ function toTask(acct, board, it) {
   const cols = it.column_values || [];
   const find = (type, titleRe) => cols.find((c) => c.type === type && titleRe.test(c.column?.title || "")) || cols.find((c) => c.type === type);
   const status = find("status", /status/i)?.text || "";
+  const priority = cols.find((c) => c.type === "status" && /priority/i.test(c.column?.title || ""))?.text || "";
   const due = String(find("date", /due|deadline/i)?.text || "").slice(0, 10);
   const people = (find("people", /person|owner|assign/i) || find("multiple-person", /./))?.text || "";
   const client = cols.find((c) => /client/i.test(c.column?.title || ""))?.text || (acct.label === "VenueScale" ? "" : acct.label);
@@ -63,8 +64,8 @@ function toTask(acct, board, it) {
   const label = acct.boardsLabelPrefix ? `${acct.label} · ${board.name}` : board.name;
   return {
     key: "t:" + it.id, source: "monday", kind: "task", server: acct.label, itemId: Number(it.id), board: label, link: it.url || "",
-    from: people || "Unassigned", subject: it.name || "(untitled item)", status, due, client, group,
-    preview: [status && "Status: " + status, due && "Due " + due, client && "Client: " + client, people && "Assigned: " + people, group && "Group: " + group].filter(Boolean).join("\n"),
+    from: people || "Unassigned", subject: it.name || "(untitled item)", status, priority, due, client, group,
+    preview: [status && "Status: " + status, priority && "Priority: " + priority, due && "Due " + due, client && "Client: " + client, people && "Assigned: " + people, group && "Group: " + group].filter(Boolean).join("\n"),
     time: Date.parse(it.updated_at) || 0, unread: false
   };
 }

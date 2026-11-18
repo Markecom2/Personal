@@ -40,13 +40,19 @@ export async function listAccounts() {
 
 const ent = (s) => String(s || "").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 
+// Clear marketing mail only. Anything less obvious is left for Claude to judge.
+const PROMO_SENDER = /(^|[._+-])(newsletters?|marketing|promos?|promotions?|offers?|deals?|campaigns?|mailers?)([._+-]|@)/i;
+const PROMO_TEXT = /\bunsubscribe\b|\b\d{1,2}% off\b|\bsale ends\b|\blimited[- ]time offer\b|\bview (this email )?in (your )?browser\b/i;
+const isPromo = (addr, subject, summary) => !/^notifications@monday\.com$/i.test(addr) && (PROMO_SENDER.test(addr) || PROMO_TEXT.test(`${subject} ${summary}`));
+
 export async function listMails(acct) {
   const j = await call(`/accounts/${acct.id}/messages/view?limit=40`);
   return (j.data || []).map((m) => ({
     key: "e:" + m.messageId, source: "email", account: { id: acct.id, email: acct.email }, msgId: String(m.messageId),
     from: ent(m.sender || m.fromAddress), fromAddr: m.fromAddress || "", subject: ent(m.subject) || "(no subject)",
     preview: String(m.summary || "").replace(/\s+/g, " ").trim(), time: Number(m.receivedTime) || 0,
-    unread: String(m.status) === "0", important: ["1", "2"].includes(String(m.priority))
+    unread: String(m.status) === "0", important: ["1", "2"].includes(String(m.priority)),
+    promo: isPromo(String(m.fromAddress || ""), ent(m.subject), String(m.summary || ""))
   }));
 }
 

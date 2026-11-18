@@ -45,8 +45,8 @@ async function refresh() {
         live.accounts = accts.value;
         for (const a of accts.value) {
           const r = await settle("Zoho " + a.email, "email", () => zoho.listMails(a));
-          if (r.ok) { live.mail[a.id] = r.value; sources.push({ icon: "email", label: a.email, state: "ok", txt: `${r.value.filter((m) => m.unread).length} unread` }); }
-          else sources.push({ icon: "email", label: a.email, state: "err", txt: "problem", note: r.error });
+          if (r.ok) { live.mail[a.id] = r.value; sources.push({ icon: "email", label: a.email, state: "ok", txt: `${r.value.filter((m) => m.unread).length} unread`, filter: { kind: "email", value: a.email } }); }
+          else sources.push({ icon: "email", label: a.email, state: "err", txt: "problem", note: r.error, filter: { kind: "email", value: a.email } });
         }
       } else sources.push({ icon: "email", label: "Zoho", state: "err", txt: "problem", note: accts.error });
     } else sources.push({ icon: "email", label: "Zoho", state: "warn", txt: "not set up", note: "Add the Zoho keys to the server settings to load mail." });
@@ -58,11 +58,11 @@ async function refresh() {
     for (const a of slackAccts) {
       const label = several ? "Slack · " + a.label : "Slack";
       const r = await settle("Slack " + a.label, "slack", () => slack.recentMessages(a, several));
-      if (r.ok) { slackItems.push(...r.value); sources.push({ icon: "slack", label, state: "ok", txt: `${r.value.length} in 24h` }); }
+      if (r.ok) { slackItems.push(...r.value); sources.push({ icon: "slack", label, state: "ok", txt: `${r.value.length} in 24h`, filter: { kind: "slack", value: a.label } }); }
       else {
         // keep last good data for this account
         slackItems.push(...live.slack.filter((m) => m.server === a.label));
-        sources.push({ icon: "slack", label, state: "err", txt: "problem", note: r.error });
+        sources.push({ icon: "slack", label, state: "err", txt: "problem", note: r.error, filter: { kind: "slack", value: a.label } });
       }
     }
     live.slack = slackItems;
@@ -76,12 +76,12 @@ async function refresh() {
       if (r.ok) {
         mon.boards.push(...r.value.boards.map((b) => ({ ...b, account: a.label })));
         mon.tasks.push(...r.value.tasks); mon.updates.push(...r.value.updates);
-        sources.push({ icon: "monday", label: "Monday · " + a.label, state: "ok", txt: `${r.value.tasks.length} open tasks`, title: r.value.boards.map((b) => b.name).join(", ") });
+        sources.push({ icon: "monday", label: "Monday · " + a.label, state: "ok", txt: `${r.value.tasks.length} open tasks`, title: r.value.boards.map((b) => b.name).join(", "), filter: { kind: "monday", value: a.label } });
       } else {
         // keep last good data for this account
         mon.tasks.push(...live.mon.tasks.filter((t) => t.server === a.label));
         mon.updates.push(...live.mon.updates.filter((t) => t.server === a.label));
-        sources.push({ icon: "monday", label: "Monday · " + a.label, state: "err", txt: "problem", note: r.error });
+        sources.push({ icon: "monday", label: "Monday · " + a.label, state: "err", txt: "problem", note: r.error, filter: { kind: "monday", value: a.label } });
       }
     }
     live.mon = mon;
@@ -101,7 +101,7 @@ async function replan() {
   live.planning = (async () => {
     const handled = store.get().handled;
     const items = allItems()
-      .filter((i) => !handled[i.key] && !(i.kind === "task" && /de-prioriti/i.test(i.status)))
+      .filter((i) => !handled[i.key] && !i.promo && !(i.kind === "task" && /de-prioriti/i.test(i.status)))
       .sort((a, b) => b.time - a.time).slice(0, 90);
     if (!items.length) return;
     const ownTasks = store.planDoc(dateIn(TZ)).tasks || [];
@@ -176,7 +176,8 @@ app.post("/api/planner", (req, res) => {
   if (p.order && typeof p.order === "object") out.order = Object.fromEntries(["A", "B", "C", "D", "E"].map((l) => [l, (Array.isArray(p.order[l]) ? p.order[l] : []).slice(0, 200).map((k) => String(k).slice(0, 80))]));
   if (Array.isArray(p.tasks)) out.tasks = p.tasks.slice(0, 100).map((t) => ({
     id: /^p:[\w-]{1,40}$/.test(t.id) ? t.id : "p:" + Math.random().toString(36).slice(2, 10),
-    text: String(t.text || "").slice(0, 300), abc: letter(t.abc) || "B", done: !!t.done, delegateTo: String(t.delegateTo || "").slice(0, 60)
+    text: String(t.text || "").slice(0, 300), abc: letter(t.abc) || "B", done: !!t.done, delegateTo: String(t.delegateTo || "").slice(0, 60),
+    due: /^\d{4}-\d{2}-\d{2}$/.test(t.due || "") ? t.due : ""
   })).filter((t) => t.text.trim());
   if ("notes" in p) out.notes = String(p.notes || "").slice(0, 5000);
   if (Array.isArray(p.focus)) out.focus = p.focus.slice(-50).map((f) => ({ key: String(f.key || "").slice(0, 80), start: Number(f.start) || 0, minutes: Math.min(240, Number(f.minutes) || 0) }));
