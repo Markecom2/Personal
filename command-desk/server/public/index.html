@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: greeting header → focus tiles (they filter) → day-plan strip → split pane: grouped inbox list | detail with plan checklist + inline reply. Phone: list, tap opens detail full-screen. */
+/* Layout: sidebar (views, connections) | main column: greeting → priority bar (filters) → day plan → split pane: grouped inbox list | detail. Under 1180px the sidebar becomes a top bar; on phones the views move to bottom tabs and tapping an item opens its detail full-screen. */
 :root{
   --bg:#f4f6f8; --surface:#ffffff; --raised:#fbfcfd; --sunk:#eceff3; --line:#dde2e8; --line-strong:#c5ccd6;
   --ink:#121620; --muted:#5d6676; --faint:#8a93a3;
@@ -259,91 +259,256 @@ details.orig .body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhe
   .composer{padding-left:16px;padding-right:16px}
   .hint{display:none}
 }
+
+/* ---------- App shell: sidebar (views + connections) beside one main column ---------- */
+.app{display:grid;grid-template-columns:244px minmax(0,1fr);min-height:100vh;min-height:100dvh}
+.side{position:sticky;top:0;height:100vh;height:100dvh;display:flex;flex-direction:column;gap:22px;padding:18px 14px 14px;background:var(--surface);border-right:1px solid var(--line);overflow-y:auto;min-width:0}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 8px}
+.brand-mark{width:30px;height:30px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:13px;flex:none}
+.brand-name{font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:-.01em;white-space:nowrap}
+.views{display:grid;gap:2px;background:none;padding:0;width:auto;max-width:none;border-radius:0}
+.views button{width:100%;padding:9px 10px;gap:10px;justify-content:flex-start;border-radius:9px}
+.views button:hover{background:var(--sunk);color:var(--ink)}
+.views button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent);box-shadow:none}
+.views svg{width:18px;height:18px;flex:none}
+.views .lbl{flex:1;text-align:left;white-space:nowrap}
+.views .count{font-family:var(--mono);font-size:12px;font-weight:500}
+.conn{display:grid;gap:8px;min-width:0}
+.conn-title{margin:0;padding:0 10px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.conn-h{display:none}
+.conn-body{display:grid;gap:8px;min-width:0}
+.sources{display:grid;gap:1px}
+.src{display:grid;grid-template-columns:20px minmax(0,1fr) 8px;gap:9px;align-items:center;border:0;background:transparent;border-radius:8px;padding:6px 10px;font-size:12px;max-width:none}
+.src:hover{background:var(--raised)}
+.src.empty{display:block}
+.src .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src .info{display:grid;min-width:0;line-height:1.3}
+.src .txt{font-size:11px}
+.src-notes{padding:0 10px;overflow-wrap:anywhere}
+.signout{margin:auto 0 0}
+.signout .btn{width:100%;justify-content:flex-start;padding:8px 10px}
+
+/* ---------- Main column ---------- */
+.main{min-width:0;width:100%;max-width:1500px;margin:0 auto;padding:22px 28px 40px;display:grid;gap:16px;align-content:start}
+.head{align-items:center}
+.hello h1{font-size:clamp(22px,2.2vw,28px)}
+.hello p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#inboxView{gap:14px;min-width:0}
+.strip-h h2,.abc-h h2,.sec-head h2{margin:0;font-family:var(--display);font-size:17px;line-height:1.25;font-weight:700;letter-spacing:-.01em;text-transform:none;color:var(--ink)}
+.strip-h span,.abc-h span,.sec-head span{font-size:12px;color:var(--muted)}
+
+/* priority bar: one strip instead of four separate cards */
+.tiles{gap:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.tile{border:0;border-right:1px solid var(--line);border-radius:0;padding:11px 16px;grid-template-columns:auto minmax(0,1fr);align-items:baseline;gap:1px 8px}
+.tile:last-child{border-right:0}
+.tile:hover{background:var(--raised)}
+.tile:focus-visible{outline-offset:-2px}
+.tile[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--line);box-shadow:inset 0 -3px 0 var(--accent)}
+.tile .n{font-size:26px}
+.tile .s{text-align:left;color:var(--muted)}
+
+/* day plan */
+.blocks{gap:8px}
+.block{flex:1 0 210px;padding:9px 12px;border-radius:10px}
+.block .refs{-webkit-line-clamp:1}
+
+/* inbox */
+.split{min-height:clamp(560px,calc(100vh - 300px),920px);border-radius:14px}
+.listpane,.detail{max-height:max(600px,calc(100dvh - 32px))}
+.listpane{min-height:0}
+
+/* ---------- Planner ---------- */
+.planner{gap:26px;min-width:0}
+.pl-nav{position:sticky;top:0;z-index:5;display:flex;gap:4px;padding:8px 0;background:var(--bg);border-bottom:1px solid var(--line)}
+.pl-nav button{border:0;background:transparent;border-radius:8px;padding:6px 12px;font-weight:600;color:var(--muted)}
+.pl-nav button:hover{background:var(--sunk);color:var(--ink)}
+.pl-nav button[aria-current="true"]{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.pl-sec{display:grid;gap:12px;min-width:0;scroll-margin-top:60px}
+.sec-head,.abc-h{display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;flex-wrap:wrap}
+.pl-top{grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);align-items:stretch}
+.frog{border-radius:14px;align-content:start;grid-template-columns:minmax(0,1fr)}
+.card{grid-template-columns:minmax(0,1fr);min-width:0}
+.pl-side{align-content:start}
+.grp{container-type:inline-size}
+.grp-h .s{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task .ctl button,.task .ctl select{min-height:28px;min-width:28px}
+@container (max-width:600px){
+  .task{grid-template-columns:30px minmax(0,1fr)}
+  .task .ctl{grid-row:auto;grid-column:2/3;justify-content:flex-start;margin-top:6px}
+  .grp-h .s{display:none}
+  .grp-h .t{flex:1}
+}
+@media (hover:hover) and (min-width:901px){
+  @container (min-width:601px){
+    .task .ctl .more{order:-1;opacity:0;transition:opacity .12s}
+    .task:hover .ctl .more,.task:focus-within .ctl .more{opacity:1}
+  }
+}
+
+/* ---------- Medium screens: sidebar becomes a top bar ---------- */
+@media (max-width:1179px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:relative;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 20px;border-right:0;border-bottom:1px solid var(--line);overflow:visible;z-index:12}
+  .views{display:flex;gap:4px}
+  .views button{width:auto;padding:7px 12px}
+  .conn{position:relative;margin-left:auto;display:block}
+  .conn-title{display:none}
+  .conn-h{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:7px 10px;font-size:12px;font-weight:600}
+  .conn-h:hover{border-color:var(--line-strong)}
+  .conn-h .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+  .conn-h .dot.warn{background:var(--high)}.conn-h .dot.err{background:var(--crit)}
+  .conn-h svg{width:14px;height:14px;transition:transform .15s}
+  .conn-h[aria-expanded="true"] svg{transform:rotate(180deg)}
+  .conn-body{display:none;position:absolute;right:0;top:calc(100% + 8px);width:340px;padding:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);z-index:20}
+  .conn.open .conn-body{display:grid}
+  .signout{margin:0}
+  .signout .btn{width:auto}
+  .main{padding:18px 20px 36px}
+}
+
+/* ---------- Phones: tabs move to the bottom ---------- */
+@media (max-width:900px){
+  .side{padding:10px 16px;flex-wrap:nowrap}
+  .brand{padding:0;min-width:0}
+  .conn{position:static}
+  .conn-body{left:16px;right:16px;top:100%;width:auto}
+  .views{position:fixed;left:0;right:0;bottom:0;z-index:15;display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 10px calc(6px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line)}
+  .views button{width:100%;min-height:44px;justify-content:center}
+  .views .lbl{flex:none}
+  .views .pill{width:8px;height:8px;padding:0;font-size:0}
+  .main{padding:14px 16px calc(84px + env(safe-area-inset-bottom,0px))}
+  .head{align-items:stretch}
+  .hello{flex-basis:100%}
+  .head-actions{width:100%}
+  .sync{flex:1 1 100%}
+  #refresh,#retriage{flex:1;justify-content:center;min-height:42px}
+  .tile:nth-child(2n){border-right:0}
+  .tile:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .tile{padding:10px 12px}
+  .tile .l{font-size:11px}
+  .tile .s{display:none}
+  .block{flex:0 0 min(240px,74vw)}
+  .split{min-height:0}
+  .listpane,.detail{max-height:none}
+  .pl-top{grid-template-columns:minmax(0,1fr)}
+  .task .ctl button,.task .ctl select{min-height:34px;min-width:34px}
+  .toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+}
+@media (max-width:480px){.brand-name{display:none}.signout .btn{padding:8px}}
+@media (prefers-reduced-motion:reduce){.conn-h svg,.task .ctl .more{transition:none}}
 </style>
 </head><body>
-<div class="wrap">
-  <header class="head">
-    <div class="hello">
-      <div class="date" id="today"></div>
-      <h1 id="headline">Getting your day ready…</h1>
-      <p id="subline">Pulling Zoho Mail, Slack and Monday.com.</p>
-    </div>
-    <div class="head-actions">
-      <span class="sync"><span class="pulse busy" id="pulse"></span><span id="syncTxt">Syncing…</span></span>
-      <button class="btn" id="refresh" type="button" title="Fetch new messages now">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Refresh</button>
-      <button class="btn primary" id="retriage" type="button" title="Ask Claude to re-rank everything and rewrite the plans">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg><span>Re-plan my day</span></button>
-      <form method="post" action="/logout" style="margin:0"><button class="btn ghost" type="submit">Sign out</button></form>
-    </div>
-  </header>
+<div class="app">
+  <aside class="side" aria-label="Command Desk">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">CD</span><span class="brand-name">Command Desk</span></div>
 
-  <div class="sources" id="sources" aria-label="Connected sources"></div>
-  <ul class="src-notes" id="srcNotes" hidden></ul>
-  <div class="banner" id="pageBanner" hidden></div>
+    <nav class="views" role="tablist" aria-label="View">
+      <button type="button" role="tab" data-view="inbox" aria-selected="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l2 3h4l2-3h5"/></svg>
+        <span class="lbl">Inbox</span><span class="count" id="inboxCount" hidden></span></button>
+      <button type="button" role="tab" data-view="planner" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M8 15l2.5 2.5L16 13"/></svg>
+        <span class="lbl">Daily planner</span><span class="pill" id="frogPill" hidden></span></button>
+    </nav>
 
-  <nav class="views" role="tablist" aria-label="View">
-    <button type="button" role="tab" data-view="inbox" aria-selected="true">Inbox</button>
-    <button type="button" role="tab" data-view="planner" aria-selected="false">Daily planner <span class="pill" id="frogPill" hidden></span></button>
-  </nav>
-
-  <div id="inboxView">
-  <section class="tiles" aria-label="Focus filters">
-    <button class="tile crit" type="button" data-tile="critical" aria-pressed="false"><span class="l"><i></i>Do now</span><span class="n" id="kCrit">0</span><span class="s">critical</span></button>
-    <button class="tile high" type="button" data-tile="high" aria-pressed="false"><span class="l"><i></i>Today</span><span class="n" id="kHigh">0</span><span class="s">high priority</span></button>
-    <button class="tile reply" type="button" data-tile="reply" aria-pressed="false"><span class="l"><i></i>Waiting on your reply</span><span class="n" id="kReply">0</span><span class="s">threads</span></button>
-    <button class="tile mon" type="button" data-tile="overdue" aria-pressed="false"><span class="l"><i></i>Overdue on Monday</span><span class="n" id="kMon">0</span><span class="s">tasks</span></button>
-  </section>
-
-  <section class="plan-strip" aria-labelledby="planH">
-    <div class="strip-h"><h2 id="planH">Your day</h2><span id="planMeta"></span></div>
-    <div class="blocks" id="blocks"></div>
-  </section>
-
-  <section class="split" id="split" aria-label="Inbox">
-    <div class="listpane">
-      <div class="tools">
-        <label class="search" for="q"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-          <span class="visually-hidden">Search</span><input id="q" type="search" placeholder="Search people, clients, subjects…" autocomplete="off"></label>
-        <div class="seg" role="group" aria-label="Source">
-          <button type="button" data-src="all" aria-pressed="true">All</button>
-          <button type="button" data-src="email" aria-pressed="false">Email</button>
-          <button type="button" data-src="slack" aria-pressed="false">Slack</button>
-          <button type="button" data-src="monday" aria-pressed="false">Monday</button>
-        </div>
+    <section class="conn" id="conn" aria-label="Connections">
+      <h2 class="conn-title">Connections</h2>
+      <button class="conn-h" id="connToggle" type="button" aria-expanded="false" aria-controls="connBody">
+        <span class="dot" id="connDot"></span><span id="connSummary">Connecting…</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="conn-body" id="connBody">
+        <div class="sources" id="sources" aria-label="Connected sources"></div>
+        <ul class="src-notes" id="srcNotes" hidden></ul>
       </div>
-      <div class="listscroll" id="list" role="listbox" aria-label="Items"></div>
-      <div class="list-foot"><span id="listCount"></span><label for="showDone"><input type="checkbox" id="showDone"> Show handled</label></div>
-    </div>
-    <div class="detail" id="detail"></div>
-  </section>
-  </div>
+    </section>
 
-  <section class="planner" id="plannerView" hidden aria-label="Daily planner">
-    <div class="pl-top">
-      <article class="frog" id="frogCard"></article>
-      <aside class="pl-side">
-        <div class="card timer" id="timer"></div>
-        <div class="card streak" id="streak"></div>
-        <div class="card rule" id="rule"></div>
-      </aside>
+    <form class="signout" method="post" action="/logout"><button class="btn ghost" type="submit">Sign out</button></form>
+  </aside>
+
+  <main class="main">
+    <header class="head">
+      <div class="hello">
+        <div class="date" id="today"></div>
+        <h1 id="headline">Getting your day ready…</h1>
+        <p id="subline">Pulling Zoho Mail, Slack and Monday.com.</p>
+      </div>
+      <div class="head-actions">
+        <span class="sync"><span class="pulse busy" id="pulse"></span><span id="syncTxt">Syncing…</span></span>
+        <button class="btn" id="refresh" type="button" title="Fetch new messages now">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Refresh</button>
+        <button class="btn primary" id="retriage" type="button" title="Ask Claude to re-rank everything and rewrite the plans">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg><span>Re-plan my day</span></button>
+      </div>
+    </header>
+
+    <div class="banner" id="pageBanner" hidden></div>
+
+    <div id="inboxView">
+      <section class="tiles" aria-label="Focus filters">
+        <button class="tile crit" type="button" data-tile="critical" aria-pressed="false"><span class="l"><i></i>Do now</span><span class="n" id="kCrit">0</span><span class="s">critical</span></button>
+        <button class="tile high" type="button" data-tile="high" aria-pressed="false"><span class="l"><i></i>Today</span><span class="n" id="kHigh">0</span><span class="s">high priority</span></button>
+        <button class="tile reply" type="button" data-tile="reply" aria-pressed="false"><span class="l"><i></i>Waiting on your reply</span><span class="n" id="kReply">0</span><span class="s">threads</span></button>
+        <button class="tile mon" type="button" data-tile="overdue" aria-pressed="false"><span class="l"><i></i>Overdue on Monday</span><span class="n" id="kMon">0</span><span class="s">tasks</span></button>
+      </section>
+
+      <section class="plan-strip" aria-labelledby="planH">
+        <div class="strip-h"><h2 id="planH">Your day</h2><span id="planMeta"></span></div>
+        <div class="blocks" id="blocks"></div>
+      </section>
+
+      <section class="split" id="split" aria-label="Inbox">
+        <div class="listpane">
+          <div class="tools">
+            <label class="search" for="q"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <span class="visually-hidden">Search</span><input id="q" type="search" placeholder="Search people, clients, subjects…" autocomplete="off"></label>
+            <div class="seg" role="group" aria-label="Source">
+              <button type="button" data-src="all" aria-pressed="true">All</button>
+              <button type="button" data-src="email" aria-pressed="false">Email</button>
+              <button type="button" data-src="slack" aria-pressed="false">Slack</button>
+              <button type="button" data-src="monday" aria-pressed="false">Monday</button>
+            </div>
+          </div>
+          <div class="listscroll" id="list" role="listbox" aria-label="Items"></div>
+          <div class="list-foot"><span id="listCount"></span><label for="showDone"><input type="checkbox" id="showDone"> Show handled</label></div>
+        </div>
+        <div class="detail" id="detail"></div>
+      </section>
     </div>
-    <section class="abc" aria-labelledby="abcH" style="display:grid;gap:12px">
-      <div class="abc-h"><h2 id="abcH">Today, sorted A to E</h2><span id="abcMeta"></span></div>
-      <form class="add" id="addTask">
-        <label class="visually-hidden" for="newTask">New task</label>
-        <input id="newTask" type="text" placeholder="Add your own task, e.g. “Write the VenueScale proposal”" autocomplete="off">
-        <label class="visually-hidden" for="newAbc">Priority</label>
-        <select id="newAbc"><option value="A">A · must</option><option value="B" selected>B · should</option><option value="C">C · nice</option><option value="D">D · delegate</option><option value="E">E · drop</option></select>
-        <button class="btn primary" type="submit">Add task</button>
-      </form>
-      <div class="abc-grid" id="abcGrid"></div>
+
+    <section class="planner" id="plannerView" hidden aria-label="Daily planner">
+      <nav class="pl-nav" aria-label="Planner sections">
+        <button type="button" data-jump="plFocus" aria-current="true">Focus</button>
+        <button type="button" data-jump="plAbc">Priorities</button>
+        <button type="button" data-jump="plTomorrow">Tomorrow</button>
+      </nav>
+      <section class="pl-sec" id="plFocus" aria-labelledby="focusH">
+        <div class="sec-head"><h2 id="focusH">Focus</h2><span>Start with the task that matters most.</span></div>
+        <div class="pl-top">
+          <article class="frog" id="frogCard"></article>
+          <aside class="pl-side">
+            <div class="card timer" id="timer"></div>
+            <div class="card streak" id="streak"></div>
+            <div class="card rule" id="rule"></div>
+          </aside>
+        </div>
+      </section>
+      <section class="abc pl-sec" id="plAbc" aria-labelledby="abcH">
+        <div class="abc-h"><h2 id="abcH">Today, sorted A to E</h2><span id="abcMeta"></span></div>
+        <form class="add" id="addTask">
+          <label class="visually-hidden" for="newTask">New task</label>
+          <input id="newTask" type="text" placeholder="Add your own task, e.g. “Write the VenueScale proposal”" autocomplete="off">
+          <label class="visually-hidden" for="newAbc">Priority</label>
+          <select id="newAbc"><option value="A">A · must</option><option value="B" selected>B · should</option><option value="C">C · nice</option><option value="D">D · delegate</option><option value="E">E · drop</option></select>
+          <button class="btn primary" type="submit">Add task</button>
+        </form>
+        <div class="abc-grid" id="abcGrid"></div>
+      </section>
+      <section class="pl-sec" id="plTomorrow" aria-labelledby="tmH">
+        <div class="abc-h"><h2 id="tmH">Plan tomorrow tonight</h2><span>Ten minutes now saves hours tomorrow.</span></div>
+        <div class="tmrw" id="tmrw"></div>
+      </section>
     </section>
-    <section aria-labelledby="tmH" style="display:grid;gap:12px">
-      <div class="abc-h"><h2 id="tmH">Plan tomorrow tonight</h2><span>Ten minutes now saves hours tomorrow.</span></div>
-      <div class="tmrw" id="tmrw"></div>
-    </section>
-  </section>
+  </main>
 </div>
 <div class="toast" id="toast" hidden role="status"></div>
 
@@ -563,6 +728,7 @@ details.orig .body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhe
       $("headline").textContent = c ? `${greet} ${c} thing${c > 1 ? "s" : ""} need${c > 1 ? "" : "s"} you now.` : hi ? `${greet} ${hi} item${hi > 1 ? "s" : ""} for today, nothing on fire.` : `${greet} You're clear.`;
       $("subline").textContent = S.triage && S.triage.headline ? S.triage.headline : S.example ? "These are example items. Open the page on claude.ai to see your own." : S.planning ? "Claude is ranking everything and writing your plans…" : "Ranked by keywords for now. Press Re-plan my day for Claude's priorities and step-by-step plans.";
     }
+    $("inboxCount").textContent = open.length; $("inboxCount").hidden = !open.length;
     const last = Math.max(S.mailAt, S.slackAt, S.mon.at);
     $("pulse").className = "pulse" + (S.loading || S.planning ? " busy" : "");
     $("syncTxt").textContent = S.planning ? "Claude is planning…" : last ? `Synced ${ago(last)} · next in ${Math.max(0, Math.round((last + (S.refreshMin || 60) * 60000 - Date.now()) / 60000))} min` : "Syncing…";
@@ -571,13 +737,17 @@ details.orig .body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhe
   function renderSources() {
     const box = $("sources"); box.replaceChildren(); const notes = [];
     for (const s of S.serverSources || []) {
-      const p = el("span", "src"); if (s.title) p.title = s.title;
+      const p = el("span", "src"); p.title = [s.label, s.title].filter(Boolean).join(": ");
       const k = SRC[s.icon] ? s.icon : "email";
       const ic = el("span", "ic " + SRC[k].cls, SRC[k].letter); ic.setAttribute("aria-hidden", "true");
-      p.append(ic, el("span", null, s.label), el("span", "dot " + s.state), el("span", "txt", s.txt)); box.append(p);
+      const info = el("span", "info"); info.append(el("span", "name", s.label.replace(/^(Slack|Monday) · /, "")), el("span", "txt", s.txt));
+      p.append(ic, info, el("span", "dot " + s.state)); box.append(p);
       if (s.note) notes.push(`${s.label}: ${s.note}`);
     }
-    if (!(S.serverSources || []).length) { const p = el("span", "src"); p.append(el("span", "txt", S.loading ? "Connecting to your accounts…" : "No sources set up yet")); box.append(p); }
+    const all = S.serverSources || [], bad = all.filter((s) => s.state !== "ok").length;
+    $("connSummary").textContent = !all.length ? (S.loading ? "Connecting…" : "None set up") : bad ? `${bad} need${bad === 1 ? "s" : ""} attention` : `${all.length} connected`;
+    $("connDot").className = "dot" + (all.some((s) => s.state === "err") ? " err" : bad || !all.length ? " warn" : "");
+    if (!(S.serverSources || []).length) { const p = el("span", "src empty"); p.append(el("span", "txt", S.loading ? "Connecting to your accounts…" : "No sources set up yet")); box.append(p); }
     const ul = $("srcNotes"); ul.replaceChildren(...notes.map((t) => el("li", null, t))); ul.hidden = !notes.length;
   }
 
@@ -923,12 +1093,12 @@ details.orig .body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhe
     const done = el("button", null, it.done ? "Undo" : "Done"); done.type = "button"; done.onclick = () => markTaskDone(it, !it.done); c.append(done);
     const sel = el("select"); sel.setAttribute("aria-label", "Priority letter");
     LETTERS.forEach((L) => sel.append(new Option(L, L, false, L === it.letter))); sel.onchange = () => setLetter(it, sel.value); c.append(sel);
-    const up = el("button", null, "↑"); up.type = "button"; up.title = "Move up"; up.onclick = () => move(it, -1, items);
-    const dn = el("button", null, "↓"); dn.type = "button"; dn.title = "Move down"; dn.onclick = () => move(it, 1, items);
+    const up = el("button", "more", "↑"); up.type = "button"; up.title = "Move up"; up.onclick = () => move(it, -1, items);
+    const dn = el("button", "more", "↓"); dn.type = "button"; dn.title = "Move down"; dn.onclick = () => move(it, 1, items);
     c.append(up, dn);
-    if (!it.done && (!frog || frog.key !== it.key)) { const fr = el("button", null, "🐸"); fr.type = "button"; fr.title = "Make this today's frog"; fr.onclick = () => planPatch(S.today, { frog: it.key, frogDone: false }); c.append(fr); }
+    if (!it.done && (!frog || frog.key !== it.key)) { const fr = el("button", "more", "🐸"); fr.type = "button"; fr.title = "Make this today's frog"; fr.onclick = () => planPatch(S.today, { frog: it.key, frogDone: false }); c.append(fr); }
     if (!it.own) { const o = el("button", null, it.letter === "D" ? "Hand off" : "Open"); o.type = "button"; o.onclick = () => openInInbox(it.key); c.append(o); }
-    else { const x = el("button", null, "✕"); x.type = "button"; x.title = "Delete task"; x.onclick = () => planPatch(S.today, { tasks: S.plan.tasks.filter((t) => t.id !== it.key) }); c.append(x); }
+    else { const x = el("button", "more", "✕"); x.type = "button"; x.title = "Delete task"; x.onclick = () => planPatch(S.today, { tasks: S.plan.tasks.filter((t) => t.id !== it.key) }); c.append(x); }
     r.append(c);
     return r;
   }
@@ -1080,6 +1250,15 @@ details.orig .body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhe
   $("retriage").onclick = () => runTriage();
   document.querySelectorAll(".views button").forEach((b) => b.onclick = () => setView(b.dataset.view));
   window.addEventListener("hashchange", () => setView(location.hash === "#planner" ? "planner" : "inbox", true));
+  const conn = $("conn"), connT = $("connToggle");
+  const setConn = (open) => { conn.classList.toggle("open", open); connT.setAttribute("aria-expanded", String(open)); };
+  connT.onclick = (e) => { e.stopPropagation(); setConn(!conn.classList.contains("open")); };
+  document.addEventListener("click", (e) => { if (!conn.contains(e.target)) setConn(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && conn.classList.contains("open")) { setConn(false); connT.focus(); } });
+  const jumps = [...document.querySelectorAll(".pl-nav button")];
+  const markJump = (id) => jumps.forEach((b) => (b.dataset.jump === id ? b.setAttribute("aria-current", "true") : b.removeAttribute("aria-current")));
+  jumps.forEach((b) => b.onclick = () => { markJump(b.dataset.jump); $(b.dataset.jump).scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); });
+  if ("IntersectionObserver" in window) { const io = new IntersectionObserver((es) => es.forEach((x) => x.isIntersecting && markJump(x.target.id)), { rootMargin: "-25% 0px -65% 0px" }); jumps.forEach((b) => io.observe($(b.dataset.jump))); }
   $("addTask").onsubmit = (e) => {
     e.preventDefault(); const text = $("newTask").value.trim(); if (!text || !S.plan) return;
     const tasks = [...(S.plan.tasks || []), { id: "p:" + Date.now().toString(36), text, abc: $("newAbc").value, done: false }];
