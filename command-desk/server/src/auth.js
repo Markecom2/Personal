@@ -1,5 +1,7 @@
 // Single-user login: scrypt password hash in env, HMAC-signed session cookie.
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 
 const COOKIE = "cd_session";
 const MAX_AGE_MS = 30 * 24 * 3600 * 1000;
@@ -18,11 +20,25 @@ function verifyPassword(password, stored) {
   return want.length === key.length && crypto.timingSafeEqual(want, key);
 }
 
+// SESSION_SECRET if set; otherwise a random key created once and kept in the data folder.
+let sessionKey = null;
 const secret = () => {
+  if (sessionKey) return sessionKey;
   const s = process.env.SESSION_SECRET;
-  if (!s || s.length < 32) throw new Error("SESSION_SECRET must be set (32+ random characters)");
-  return s;
+  if (s && s.length >= 32) return (sessionKey = s);
+  const file = path.resolve(process.env.DATA_DIR || "./data", "session.key");
+  try { sessionKey = fs.readFileSync(file, "utf8").trim(); } catch { /* create below */ }
+  if (!sessionKey || sessionKey.length < 32) {
+    sessionKey = crypto.randomBytes(32).toString("hex");
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, sessionKey, { mode: 0o600 });
+  }
+  return sessionKey;
 };
+
+// DASH_PASSWORD_HASH (scrypt$...) is preferred; a plain DASH_PASSWORD is hashed in memory at start-up.
+let passwordHash = null;
+const storedHash = () => passwordHash ||= process.env.DASH_PASSWORD_HASH || (process.env.DASH_PASSWORD ? hashPassword(process.env.DASH_PASSWORD) : null);
 const sign = (v) => crypto.createHmac("sha256", secret()).update(v).digest("base64url");
 
 function makeToken() {
@@ -61,7 +77,7 @@ export function mountAuth(app) {
   app.post("/login", (req, res) => {
     const ip = req.ip;
     if (tooMany(ip)) return res.status(429).type("html").send(loginPage(false, "Too many attempts. Wait 15 minutes and try again."));
-    if (!verifyPassword(String(req.body.password || ""), process.env.DASH_PASSWORD_HASH)) {
+    if (!verifyPassword(String(req.body.password || ""), storedHash())) {
       fails.get(ip).push(Date.now());
       return res.redirect(303, "/login?e=1");
     }

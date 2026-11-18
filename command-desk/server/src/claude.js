@@ -30,7 +30,7 @@ function parseJson(text) {
   throw new Error("Claude's plan was not valid JSON.");
 }
 
-export async function triage(items, tz) {
+export async function triage(items, tz, plannerTasks = []) {
   const now = new Date().toLocaleString("en-AU", { timeZone: tz, dateStyle: "full", timeStyle: "short" });
   const lines = items.map((i) => JSON.stringify({
     id: i.key, src: i.source === "monday" ? "monday-" + i.kind : i.mondayMail ? "monday-email" : i.source, from: i.from,
@@ -38,6 +38,7 @@ export async function triage(items, tz) {
     at: new Date(i.time).toISOString(), unread: i.unread, subject: String(i.subject).slice(0, 160),
     text: String(i.preview || "").slice(0, i.source === "monday" ? 600 : 420)
   })).join("\n");
+  const own = plannerTasks.filter((t) => !t.done).map((t) => JSON.stringify({ id: t.id, src: "own-task", text: t.text, mark: t.abc || "" })).join("\n");
   const prompt =
     `You are the chief of staff for Mark Benson, who runs an e-commerce/web agency (Ecommerce Ally) and manages client projects for several agencies. ` +
     `It is ${now} (${tz}). Below are recent emails (Zoho), Slack messages, open Monday.com tasks (status, due date, client, assignees) from the VenueScale, Mood Creative and The Great Escape accounts, and recent Monday discussion threads, one JSON object per line. ` +
@@ -46,8 +47,10 @@ export async function triage(items, tz) {
     `Triage every item. Urgency levels: "critical" (client-facing breakage, money, legal, or a hard deadline today), "high" (someone is waiting on Mark today), ` +
     `"normal" (needs action this week), "low" (minor), "fyi" (newsletters, promotions, automated notices, no action). ` +
     `For critical/high/normal items write a concrete execution plan of 2-4 short imperative steps. Name the client/project if identifiable.\n` +
-    `Then build a day plan of 3-6 time blocks using real clock times from now until evening in ${tz} (e.g. "14:00-14:30") that sequences the urgent work.\n\n` +
-    `Reply with ONLY JSON of this shape:\n{"headline":"one sentence on what matters most today","items":[{"id":"...","urgency":"critical|high|normal|low|fyi","title":"<=80 chars, action-first","client":"","why":"one sentence","plan":["step"],"replyNeeded":true}],"dayPlan":[{"slot":"14:00-14:30","focus":"...","ids":["..."]}]}\n\nITEMS:\n${lines}`;
+    `Also sort the actionable items with Brian Tracy's ABCDE method (Eat That Frog): "A" = must do, serious consequences if not done; "B" = should do, mild consequences; "C" = nice to do, no consequences; "D" = delegate to someone else (say to whom, e.g. Sorav or Jhanvi for dev work); "E" = eliminate (no action). Give every item a letter.\n` +
+    `Pick ONE frog: the single A task that will have the greatest positive impact on Mark's results if done first today (the hardest, most important one, not the quickest). Own tasks Mark typed himself count too. Give its first concrete step, so he can start immediately.\n` +
+    `Then build a day plan of 3-6 time blocks using real clock times from now until evening in ${tz} (e.g. "14:00-14:30") that sequences the work Eat-That-Frog style: the frog in the first block of the day before email and Slack, 60-90 minute single-task blocks, messages batched into one or two blocks, D items handed off early.\n\n` +
+    `Reply with ONLY JSON of this shape:\n{"headline":"one sentence on what matters most today","items":[{"id":"...","urgency":"critical|high|normal|low|fyi","title":"<=80 chars, action-first","client":"","why":"one sentence","plan":["step"],"replyNeeded":true,"abcde":"A","delegateTo":""}],"frog":{"id":"...","why":"one sentence","firstStep":"one concrete action"},"dayPlan":[{"slot":"14:00-14:30","focus":"...","ids":["..."]}]}\n\nITEMS:\n${lines}` + (own ? `\n\nMARK'S OWN TASKS (ids start with p:):\n${own}` : "");
   const out = parseJson(await ask(prompt, { effort: "medium", maxTokens: 16000 }));
   if (!out || !Array.isArray(out.items)) throw new Error("Claude's plan was missing items.");
   return out;

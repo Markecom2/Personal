@@ -181,6 +181,70 @@ details.orig .body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhe
 .d-empty b{display:block;color:var(--ink);font-family:var(--display);font-size:20px;margin-bottom:6px}
 .hint{font-size:12px;color:var(--faint);display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:12px}
 
+/* view switch */
+.views{display:flex;gap:4px;background:var(--sunk);border-radius:12px;padding:4px;width:max-content;max-width:100%}
+.views button{border:0;background:transparent;border-radius:9px;padding:8px 16px;font-weight:600;color:var(--muted);display:inline-flex;gap:8px;align-items:center}
+.views button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.views .pill{font-size:11px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:1px 8px}
+.views .pill.done{background:var(--ok)}
+#inboxView{display:grid;gap:18px}
+
+/* planner */
+.planner{display:grid;gap:22px}
+.pl-top{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:16px;align-items:start}
+.frog{background:var(--accent-soft);border:1px solid var(--accent);border-radius:18px;padding:22px 24px;display:grid;gap:12px;min-width:0}
+.frog .eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.frog h2{margin:0;font-family:var(--display);font-size:clamp(22px,2.8vw,30px);line-height:1.15;letter-spacing:-.02em;text-wrap:balance;overflow-wrap:anywhere}
+.frog .fwhy{margin:0;color:var(--muted);max-width:65ch}
+.frog .first{background:var(--surface);border-radius:12px;padding:12px 14px;border:1px solid var(--line)}
+.frog .first b{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.frog .acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.frog select{font:inherit;border:1px solid var(--line);border-radius:9px;padding:7px 10px;background:var(--surface);color:var(--ink);max-width:100%}
+.frog.eaten{background:var(--surface);border-color:var(--ok)}
+.frog.eaten .eyebrow{color:var(--ok)}
+.pl-side{display:grid;gap:12px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;gap:6px}
+.card .k{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.streak .n{font-family:var(--display);font-size:30px;font-weight:700;line-height:1}
+.rule q{font-family:var(--display);font-size:17px;font-weight:600;quotes:none;line-height:1.3}
+.rule p{margin:0;color:var(--muted);font-size:13px}
+.timer .clock{font-family:var(--mono);font-size:34px;font-weight:500;letter-spacing:-.02em}
+.timer .what{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.timer .row2{display:flex;flex-wrap:wrap;gap:6px}
+.timer .row2 button{padding:6px 10px}
+.abc-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.abc-h h2{margin:0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.abc-h span{font-size:12px;color:var(--faint)}
+.add{display:flex;gap:8px;flex-wrap:wrap}
+.add input{flex:1 1 240px;min-width:0;font:inherit;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:var(--surface);color:var(--ink)}
+.add select{font:inherit;border:1px solid var(--line);border-radius:10px;padding:9px;background:var(--surface);color:var(--ink)}
+.add input:focus,.add select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.abc-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:start}
+.abc-col{display:grid;gap:16px;min-width:0}
+.grp{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.grp-h{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--raised)}
+.grp-h .L{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-weight:800;font-family:var(--display);color:#fff;flex:none}
+.grp-h .t{font-weight:700}
+.grp-h .s{font-size:12px;color:var(--muted);flex:1;min-width:0}
+.grp-h .btn{padding:4px 10px;font-size:12px}
+.L.A{background:var(--crit)}.L.B{background:var(--high)}.L.C{background:var(--norm)}.L.D{background:var(--slack)}.L.E{background:var(--low)}
+.task{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:2px 10px;padding:10px 14px;border-bottom:1px solid var(--line);align-items:center}
+.task:last-child{border-bottom:0}
+.task .rank{font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500}
+.task .tt{font-weight:600;line-height:1.35;overflow-wrap:anywhere;min-width:0}
+.task .tt.done{text-decoration:line-through;color:var(--faint)}
+.task .meta{grid-column:2/3;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task .ctl{grid-row:1/3;grid-column:3;display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.task .ctl button,.task .ctl select{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:7px;padding:4px 7px;cursor:pointer}
+.task .ctl button:hover{border-color:var(--line-strong)}
+.task.isfrog{background:var(--accent-soft)}
+.empty-grp{padding:14px;font-size:13px;color:var(--faint)}
+.tmrw{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.tmrw textarea{font:inherit;border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:120px;resize:vertical;background:var(--surface);color:var(--ink);width:100%}
+.tmrw ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.tmrw li{display:flex;gap:8px;align-items:center;font-size:13px}
+.tmrw li span{flex:1;min-width:0;overflow-wrap:anywhere}
+@media (max-width:900px){.pl-top,.abc-grid,.tmrw{grid-template-columns:minmax(0,1fr)}.task{grid-template-columns:30px minmax(0,1fr)}.task .ctl{grid-row:auto;grid-column:2/3;justify-content:flex-start}}
 .banner{border:1px solid var(--line);background:var(--high-soft);border-radius:12px;padding:10px 14px;font-size:13px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(22px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600;z-index:30;box-shadow:var(--shadow);max-width:calc(100vw - 32px)}
 
@@ -218,6 +282,12 @@ details.orig .body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhe
   <ul class="src-notes" id="srcNotes" hidden></ul>
   <div class="banner" id="pageBanner" hidden></div>
 
+  <nav class="views" role="tablist" aria-label="View">
+    <button type="button" role="tab" data-view="inbox" aria-selected="true">Inbox</button>
+    <button type="button" role="tab" data-view="planner" aria-selected="false">Daily planner <span class="pill" id="frogPill" hidden></span></button>
+  </nav>
+
+  <div id="inboxView">
   <section class="tiles" aria-label="Focus filters">
     <button class="tile crit" type="button" data-tile="critical" aria-pressed="false"><span class="l"><i></i>Do now</span><span class="n" id="kCrit">0</span><span class="s">critical</span></button>
     <button class="tile high" type="button" data-tile="high" aria-pressed="false"><span class="l"><i></i>Today</span><span class="n" id="kHigh">0</span><span class="s">high priority</span></button>
@@ -247,6 +317,33 @@ details.orig .body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhe
     </div>
     <div class="detail" id="detail"></div>
   </section>
+  </div>
+
+  <section class="planner" id="plannerView" hidden aria-label="Daily planner">
+    <div class="pl-top">
+      <article class="frog" id="frogCard"></article>
+      <aside class="pl-side">
+        <div class="card timer" id="timer"></div>
+        <div class="card streak" id="streak"></div>
+        <div class="card rule" id="rule"></div>
+      </aside>
+    </div>
+    <section class="abc" aria-labelledby="abcH" style="display:grid;gap:12px">
+      <div class="abc-h"><h2 id="abcH">Today, sorted A to E</h2><span id="abcMeta"></span></div>
+      <form class="add" id="addTask">
+        <label class="visually-hidden" for="newTask">New task</label>
+        <input id="newTask" type="text" placeholder="Add your own task, e.g. “Write the VenueScale proposal”" autocomplete="off">
+        <label class="visually-hidden" for="newAbc">Priority</label>
+        <select id="newAbc"><option value="A">A · must</option><option value="B" selected>B · should</option><option value="C">C · nice</option><option value="D">D · delegate</option><option value="E">E · drop</option></select>
+        <button class="btn primary" type="submit">Add task</button>
+      </form>
+      <div class="abc-grid" id="abcGrid"></div>
+    </section>
+    <section aria-labelledby="tmH" style="display:grid;gap:12px">
+      <div class="abc-h"><h2 id="tmH">Plan tomorrow tonight</h2><span>Ten minutes now saves hours tomorrow.</span></div>
+      <div class="tmrw" id="tmrw"></div>
+    </section>
+  </section>
 </div>
 <div class="toast" id="toast" hidden role="status"></div>
 
@@ -258,7 +355,7 @@ details.orig .body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhe
     mcp: null, sample: null, accounts: [], mail: {}, slack: [], mailErr: {}, slackErr: null, mailAt: 0, slackAt: 0,
     mon: { boards: [], tasks: {}, updates: {}, err: {}, ctx: {}, at: 0 },
     triage: null, triageAt: 0, planning: false,
-    src: "all", tile: null, q: "", showDone: false, selected: null, collapsed: { fyi: true, later: true },
+    src: "all", tile: null, q: "", showDone: false, selected: null, collapsed: { fyi: true, later: true }, view: "inbox", plan: null, planT: null, today: "", tomorrow: "", streak: 0, collapsedE: true,
     example: false, loading: true, sending: false, draftCtl: null, confirmFor: null
   };
   const RANK = { critical: 0, high: 1, normal: 2, low: 3, fyi: 4 };
@@ -421,7 +518,7 @@ details.orig .body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhe
     const t = S.triage && S.triage.items ? Object.fromEntries(S.triage.items.map((x) => [x.id, x])) : {};
     return allItems().map((it) => {
       const ai = t[it.key], q = quick(it);
-      return ai ? { ...it, urgency: RANK[ai.urgency] != null ? ai.urgency : q, title: ai.title || it.subject, why: ai.why || "", plan: Array.isArray(ai.plan) ? ai.plan.slice(0, 5) : [], client: ai.client || it.client || "", replyNeeded: !!ai.replyNeeded, ai: true }
+      return ai ? { ...it, urgency: RANK[ai.urgency] != null ? ai.urgency : q, title: ai.title || it.subject, why: ai.why || "", plan: Array.isArray(ai.plan) ? ai.plan.slice(0, 5) : [], client: ai.client || it.client || "", replyNeeded: !!ai.replyNeeded, abcde: ai.abcde, delegateTo: ai.delegateTo || "", ai: true }
         : { ...it, urgency: q, title: it.subject, why: "", plan: [], client: it.client || "", replyNeeded: (q === "critical" || q === "high") && it.kind !== "task", ai: false };
     }).sort((a, b) => RANK[a.urgency] - RANK[b.urgency] || b.time - a.time);
   }
@@ -452,7 +549,7 @@ details.orig .body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhe
     $("kReply").textContent = n((i) => i.replyNeeded);
     $("kMon").textContent = n((i) => i.kind === "task" && i.due && i.due < todayStr());
     document.querySelectorAll(".tile").forEach((t) => t.setAttribute("aria-pressed", String(S.tile === t.dataset.tile)));
-    renderHeader(); renderSources(); renderBlocks(); renderList(); renderDetail();
+    renderHeader(); renderSources(); renderBlocks(); renderList(); renderDetail(); renderPlanner();
   }
 
   function renderHeader() {
@@ -653,6 +750,251 @@ details.orig .body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhe
     setDone(it.key, now); toast(now ? "Marked as handled" : "Moved back to your list"); render();
   }
 
+  /* ---------- daily planner (Eat That Frog) ---------- */
+  const PRINCIPLES = [
+    ["Eat the frog first", "Do your hardest, most important task before anything else, before email and Slack."],
+    ["If you have two frogs, eat the ugliest one first", "Start with the biggest, hardest task. The rest of the day gets easier."],
+    ["Plan every day in advance", "Ten minutes of planning saves up to two hours of execution. Write tomorrow's list tonight."],
+    ["Apply the 80/20 rule", "A few of your tasks produce most of your results. Those are your A tasks."],
+    ["Consider the consequences", "The most important task is the one with the biggest long-term impact if you do or don't do it."],
+    ["Practise creative procrastination", "You can't do everything. Deliberately put off the low-value tasks."],
+    ["Use the ABCDE method", "Sort before you start: A must, B should, C nice, D delegate, E eliminate. Never do a B while an A is left."],
+    ["Focus on key result areas", "Know the few results you are responsible for, and spend your time there."],
+    ["The law of three", "Three tasks account for most of your value. Find them and give them most of your time."],
+    ["Prepare thoroughly before you begin", "Have everything you need to hand, so you can start and not stop."],
+    ["One step at a time", "You don't need to see the whole road. Just take the next clear step."],
+    ["Upgrade your key skills", "Getting better at your most important tasks makes the frog smaller every time."],
+    ["Identify your key constraint", "Find the one thing that most limits how fast you reach your goal, and work on that."],
+    ["Put the pressure on yourself", "Work as if you were leaving for a month tomorrow and had to finish the key tasks first."],
+    ["Work at your energy peak", "Do the frog when your energy is highest, usually first thing."],
+    ["Motivate yourself into action", "Starting is the hardest part. Begin and momentum follows."],
+    ["Technology is a terrible master", "Turn off notifications during your frog block. Check messages in batches."],
+    ["Slice and dice the task", "Break a big task into small slices and do just one to get going."],
+    ["Create large chunks of time", "Block 60 to 90 minutes with no interruptions for your most important work."],
+    ["Develop a sense of urgency", "Move fast on your key tasks. Do it now."],
+    ["Single-handle every task", "Once you start the frog, keep going until it's 100 percent done."]
+  ];
+  const LETTERS = ["A", "B", "C", "D", "E"];
+  const LETTER_INFO = { A: ["Must do", "Serious consequences if it's not done"], B: ["Should do", "Mild consequences. Never do a B while an A is left"], C: ["Nice to do", "No consequences either way"], D: ["Delegate", "Someone else can do it. Hand it off early"], E: ["Eliminate", "No real value. Drop it"] };
+  const defaultLetter = { critical: "A", high: "B", normal: "C", low: "C", fyi: "E" };
+
+  function setView(v, fromHash) {
+    S.view = v === "planner" ? "planner" : "inbox";
+    $("inboxView").hidden = S.view !== "inbox"; $("plannerView").hidden = S.view !== "planner";
+    document.querySelectorAll(".views button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.view === S.view)));
+    if (!fromHash) { try { history.replaceState(null, "", S.view === "planner" ? "#planner" : location.pathname); } catch {} }
+    renderPlanner();
+  }
+
+  async function planPatch(date, patch) {
+    const isToday = date === S.today;
+    const cur = isToday ? S.plan : S.planT;
+    if (cur) Object.assign(cur, patch);
+    renderPlanner();
+    try { const r = await api("/api/planner", { date, patch }); if (isToday) S.plan = r.doc; else S.planT = r.doc; S.streak = r.frogStreak; renderPlanner(); }
+    catch (e) { toast(e.message || "Couldn't save the planner"); }
+  }
+
+  function planItems() {
+    if (!S.plan) return [];
+    const abc = S.plan.abc || {};
+    const inbox = ITEMS.filter((i) => !isDone(i.key)).map((i) => ({ ...i, letter: abc[i.key] || (LETTERS.includes(i.abcde) ? i.abcde : defaultLetter[i.urgency] || "C"), own: false }));
+    const own = (S.plan.tasks || []).map((t) => ({ key: t.id, own: true, title: t.text, done: t.done, letter: abc[t.id] || t.abc || "B", delegateTo: t.delegateTo || "", source: "own", time: 0, urgency: "normal" }));
+    const all = [...own, ...inbox];
+    const order = S.plan.order || {};
+    const pos = (it) => { const i = (order[it.letter] || []).indexOf(it.key); return i < 0 ? 1e6 : i; };
+    return all.sort((a, b) => LETTERS.indexOf(a.letter) - LETTERS.indexOf(b.letter) || pos(a) - pos(b) || (a.done - b.done) || RANK[a.urgency] - RANK[b.urgency] || b.time - a.time);
+  }
+
+  function frogOf(items) {
+    const want = S.plan && S.plan.frog || (S.triage && S.triage.frog && S.triage.frog.id);
+    let f = want && items.find((i) => i.key === want);
+    if (!f && want && S.plan && S.plan.frogDone) f = { key: want, title: (S.plan.frogTitle || "Today's frog"), gone: true };
+    if (!f) f = items.find((i) => i.letter === "A" && !i.done);
+    return f || null;
+  }
+
+  function markTaskDone(it, done) {
+    if (it.own) planPatch(S.today, { tasks: (S.plan.tasks || []).map((t) => (t.id === it.key ? { ...t, done } : t)) });
+    else { setDone(it.key, done); render(); }
+  }
+
+  function setLetter(it, L) {
+    const abc = { ...(S.plan.abc || {}), [it.key]: L };
+    planPatch(S.today, { abc });
+  }
+
+  function move(it, dir, items) {
+    const same = items.filter((i) => i.letter === it.letter).map((i) => i.key);
+    const i = same.indexOf(it.key), j = i + dir; if (j < 0 || j >= same.length) return;
+    [same[i], same[j]] = [same[j], same[i]];
+    planPatch(S.today, { order: { ...(S.plan.order || {}), [it.letter]: same } });
+  }
+
+  function openInInbox(key) { setView("inbox"); S.tile = null; S.q = ""; $("q").value = ""; S.src = "all"; S.selected = key; render(); select(key, true); }
+
+  function renderPlanner() {
+    const pill = $("frogPill");
+    if (!S.plan) { pill.hidden = true; return; }
+    const items = planItems(), frog = frogOf(items);
+    const eaten = !!(S.plan.frogDone || (frog && (frog.done || (!frog.own && !frog.gone && isDone(frog.key)))));
+    pill.hidden = !frog; pill.textContent = eaten ? "frog eaten" : "1 frog"; pill.className = "pill" + (eaten ? " done" : "");
+    if (S.view !== "planner") return;
+
+    /* frog card */
+    const fc = $("frogCard"); fc.replaceChildren(); fc.className = "frog" + (eaten ? " eaten" : "");
+    const tf = S.triage && S.triage.frog && frog && S.triage.frog.id === frog.key ? S.triage.frog : null;
+    if (!frog) {
+      fc.append(el("span", "eyebrow", "Today's frog"), el("h2", null, S.loading ? "Finding your frog…" : "No frog picked yet"),
+        el("p", "fwhy", "Add your most important task below and mark it A, or press Re-plan my day and Claude will pick the one task that matters most."));
+    } else {
+      fc.append(el("span", "eyebrow", eaten ? "Frog eaten 🐸" : "Today's frog · do this first"), el("h2", null, frog.title));
+      if (eaten) fc.append(el("p", "fwhy", `Done${S.plan.frogDoneAt ? " at " + new Date(S.plan.frogDoneAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}. The hardest part of your day is behind you. Move on to the next A task.`));
+      else {
+        if (tf && tf.why) fc.append(el("p", "fwhy", tf.why));
+        else if (frog.why) fc.append(el("p", "fwhy", frog.why));
+        const step = (tf && tf.firstStep) || (frog.plan && frog.plan[0]);
+        if (step) { const f = el("div", "first"); f.append(el("b", null, "Start with"), document.createTextNode(step)); fc.append(f); }
+      }
+      const acts = el("div", "acts");
+      if (!eaten) {
+        const go = el("button", "btn primary", "Start 90-min focus"); go.type = "button"; go.onclick = () => startFocus(frog, 90); acts.append(go);
+        const ate = el("button", "btn", "🐸 Ate the frog"); ate.type = "button";
+        ate.onclick = () => { planPatch(S.today, { frogDone: true, frog: frog.key, frogTitle: frog.title }); if (!frog.gone) markTaskDone(frog, true); toast("Frog eaten. Well done."); };
+        acts.append(ate);
+      } else {
+        const undo = el("button", "btn ghost", "Not done yet"); undo.type = "button";
+        undo.onclick = () => { planPatch(S.today, { frogDone: false }); if (!frog.gone) markTaskDone(frog, false); }; acts.append(undo);
+      }
+      if (!frog.own && !frog.gone) { const o = el("button", "btn ghost", "Open item"); o.type = "button"; o.onclick = () => openInInbox(frog.key); acts.append(o); }
+      const cands = items.filter((i) => (i.letter === "A" || i.letter === "B") && !i.done && i.key !== frog.key).slice(0, 25);
+      if (cands.length && !eaten) {
+        const sel = el("select"); sel.id = "frogPick"; sel.setAttribute("aria-label", "Pick a different frog");
+        sel.append(new Option("Pick a different frog…", ""));
+        cands.forEach((c) => sel.append(new Option(`${c.letter} · ${c.title.slice(0, 70)}`, c.key)));
+        sel.onchange = () => sel.value && planPatch(S.today, { frog: sel.value, frogDone: false });
+        acts.append(sel);
+      }
+      fc.append(acts);
+    }
+
+    /* streak + principle */
+    const st = $("streak"); st.replaceChildren(el("span", "k", "Frog streak"), el("span", "n", `${S.streak} day${S.streak === 1 ? "" : "s"}`),
+      el("span", null, S.streak ? "Days in a row you ate the frog first." : "Eat today's frog to start a streak."));
+    const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 864e5);
+    const [ph, pt] = PRINCIPLES[doy % PRINCIPLES.length];
+    const ru = $("rule"); const q = el("q", null, ph); ru.replaceChildren(el("span", "k", "Today's principle · Eat That Frog"), q, el("p", null, pt));
+    renderTimer();
+
+    /* ABCDE groups */
+    const grid = $("abcGrid"); grid.replaceChildren();
+    const left = el("div", "abc-col"), right = el("div", "abc-col");
+    const aAll = items.filter((i) => i.letter === "A"), aDone = aAll.filter((i) => i.done).length;
+    $("abcMeta").textContent = `${aAll.length - aDone} A task${aAll.length - aDone === 1 ? "" : "s"} left · your 20% that gives 80% of results`;
+    for (const L of LETTERS) {
+      const rows = items.filter((i) => i.letter === L);
+      const g = el("section", "grp"), h = el("div", "grp-h");
+      h.append(el("span", "L " + L, L), el("span", "t", LETTER_INFO[L][0]), el("span", "s", LETTER_INFO[L][1]));
+      if (L === "E" && rows.some((r) => !r.done)) {
+        const clr = el("button", "btn", "Drop all"); clr.type = "button"; clr.title = "Mark every E item as handled";
+        clr.onclick = () => { rows.filter((r) => !r.own).forEach((r) => setDone(r.key, true)); const ownE = new Set(rows.filter((r) => r.own).map((r) => r.key));
+          if (ownE.size) planPatch(S.today, { tasks: S.plan.tasks.map((t) => (ownE.has(t.id) ? { ...t, done: true } : t)) }); render(); toast("E items cleared"); };
+        h.append(clr);
+      }
+      if (L === "E" && rows.length) {
+        const tg = el("button", "btn ghost", S.collapsedE ? `Show ${rows.length}` : "Hide"); tg.type = "button"; tg.onclick = () => { S.collapsedE = !S.collapsedE; renderPlanner(); }; h.append(tg);
+      }
+      g.append(h);
+      if (!rows.length) g.append(el("div", "empty-grp", L === "A" ? "No A tasks. Add the one thing that would make today a success." : "Nothing here."));
+      if (!(L === "E" && S.collapsedE)) rows.slice(0, 40).forEach((it, idx) => g.append(taskRow(it, `${L}${idx + 1}`, items, frog)));
+      (L === "A" || L === "B" ? left : right).append(g);
+    }
+    grid.append(left, right);
+    renderTomorrow(items);
+  }
+
+  function taskRow(it, rank, items, frog) {
+    const r = el("div", "task" + (frog && frog.key === it.key ? " isfrog" : ""));
+    r.append(el("span", "rank", frog && frog.key === it.key ? "🐸" : rank), el("span", "tt" + (it.done ? " done" : ""), it.title));
+    const meta = it.own ? "Your task" + (it.delegateTo ? " · for " + it.delegateTo : "")
+      : [it.letter === "D" && it.delegateTo ? "Hand to " + it.delegateTo : "", it.source === "email" ? "Email · " + it.from : it.source === "slack" ? "Slack · " + it.from : it.kind === "task" ? `Monday · ${it.status || ""}${it.due ? " · due " + it.due : ""}` : "Monday · " + it.from].filter(Boolean).join(" · ");
+    r.append(el("span", "meta", meta));
+    const c = el("div", "ctl");
+    const done = el("button", null, it.done ? "Undo" : "Done"); done.type = "button"; done.onclick = () => markTaskDone(it, !it.done); c.append(done);
+    const sel = el("select"); sel.setAttribute("aria-label", "Priority letter");
+    LETTERS.forEach((L) => sel.append(new Option(L, L, false, L === it.letter))); sel.onchange = () => setLetter(it, sel.value); c.append(sel);
+    const up = el("button", null, "↑"); up.type = "button"; up.title = "Move up"; up.onclick = () => move(it, -1, items);
+    const dn = el("button", null, "↓"); dn.type = "button"; dn.title = "Move down"; dn.onclick = () => move(it, 1, items);
+    c.append(up, dn);
+    if (!it.done && (!frog || frog.key !== it.key)) { const fr = el("button", null, "🐸"); fr.type = "button"; fr.title = "Make this today's frog"; fr.onclick = () => planPatch(S.today, { frog: it.key, frogDone: false }); c.append(fr); }
+    if (!it.own) { const o = el("button", null, it.letter === "D" ? "Hand off" : "Open"); o.type = "button"; o.onclick = () => openInInbox(it.key); c.append(o); }
+    else { const x = el("button", null, "✕"); x.type = "button"; x.title = "Delete task"; x.onclick = () => planPatch(S.today, { tasks: S.plan.tasks.filter((t) => t.id !== it.key) }); c.append(x); }
+    r.append(c);
+    return r;
+  }
+
+  function renderTomorrow(items) {
+    if (document.activeElement && ["planNotes", "tmFrog"].includes(document.activeElement.id)) return; // don't wipe what's being typed
+    const box = $("tmrw"); box.replaceChildren();
+    const left = el("div", "card"), right = el("div", "card");
+    left.append(el("span", "k", `Tomorrow · ${S.tomorrow ? new Date(S.tomorrow + "T12:00").toLocaleDateString([], { weekday: "long", day: "numeric", month: "short" }) : ""}`));
+    const tt = (S.planT && S.planT.tasks) || [];
+    const carry = items.filter((i) => !i.done && (i.letter === "A" || i.letter === "B") && i.own && !tt.some((t) => t.text === i.title));
+    const cb = el("button", "btn", carry.length ? `Carry ${carry.length} unfinished A/B task${carry.length === 1 ? "" : "s"} to tomorrow` : "Nothing of yours to carry over");
+    cb.type = "button"; cb.disabled = !carry.length;
+    cb.onclick = () => planPatch(S.tomorrow, { tasks: [...tt, ...carry.map((c, i) => ({ id: "p:" + (Date.now() + i).toString(36), text: c.title, abc: c.letter, done: false }))] });
+    left.append(cb);
+    const form = el("form", "add"); const inp = el("input"); inp.id = "tmFrog"; inp.placeholder = "Tomorrow's frog: the one task to do first"; inp.setAttribute("aria-label", "Tomorrow's frog");
+    const ab = el("button", "btn primary", "Set frog"); ab.type = "submit"; form.append(inp, ab);
+    form.onsubmit = (e) => { e.preventDefault(); const text = inp.value.trim(); if (!text) return; const id = "p:" + Date.now().toString(36);
+      planPatch(S.tomorrow, { tasks: [{ id, text, abc: "A", done: false }, ...tt], frog: id }); toast("Tomorrow's frog is set"); };
+    left.append(form);
+    const ul = el("ul");
+    tt.forEach((t) => { const li = el("li"); li.append(el("span", "L " + t.abc, t.abc), el("span", null, (S.planT.frog === t.id ? "🐸 " : "") + t.text));
+      const x = el("button", "btn ghost", "Remove"); x.type = "button"; x.onclick = () => planPatch(S.tomorrow, { tasks: tt.filter((y) => y.id !== t.id), frog: S.planT.frog === t.id ? null : S.planT.frog }); li.append(x); ul.append(li); });
+    if (!tt.length) ul.append(el("li", null, "Nothing planned for tomorrow yet."));
+    left.append(ul);
+    right.append(el("span", "k", "Tonight's notes"));
+    const ta = el("textarea"); ta.id = "planNotes"; ta.placeholder = "What got done, what's blocked, what tomorrow's frog depends on…"; ta.value = (S.plan && S.plan.notes) || "";
+    ta.oninput = () => { clearTimeout(ta._t); ta._t = setTimeout(() => planPatch(S.today, { notes: ta.value }), 800); };
+    right.append(ta);
+    box.append(left, right);
+  }
+
+  /* focus timer (single-handle the task); remembered in this browser */
+  function focusState() { try { return JSON.parse(localStorage.getItem("cd:focus") || "null"); } catch { return null; } }
+  function startFocus(it, minutes) {
+    const f = { key: it.key, title: it.title, start: Date.now(), minutes };
+    try { localStorage.setItem("cd:focus", JSON.stringify(f)); } catch {}
+    toast(`Focus started: ${minutes} minutes on one task`); renderTimer();
+  }
+  function stopFocus(completed) {
+    const f = focusState(); try { localStorage.removeItem("cd:focus"); } catch {}
+    if (f && S.plan) { const mins = Math.round((Date.now() - f.start) / 60000); if (mins >= 1) planPatch(S.today, { focus: [...(S.plan.focus || []), { key: f.key, start: f.start, minutes: Math.min(mins, f.minutes) }] }); }
+    if (completed) toast("Focus block done. Take a short break.");
+    renderTimer();
+  }
+  function renderTimer() {
+    const box = $("timer"); if (!box || S.view !== "planner") return;
+    const f = focusState(); box.replaceChildren(el("span", "k", "Focus block"));
+    const mins = ((S.plan && S.plan.focus) || []).reduce((n, x) => n + (x.minutes || 0), 0);
+    if (f) {
+      const left = f.start + f.minutes * 60000 - Date.now();
+      if (left <= 0) { stopFocus(true); return; }
+      const m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000);
+      box.append(el("span", "clock", `${m}:${String(sec).padStart(2, "0")}`), el("span", "what", f.title));
+      const r = el("div", "row2"); const stop = el("button", "btn", "Stop"); stop.type = "button"; stop.onclick = () => stopFocus(false); r.append(stop); box.append(r);
+    } else {
+      box.append(el("span", null, "One task, no interruptions, until it's done."));
+      const r = el("div", "row2");
+      [25, 60, 90].forEach((n) => { const b = el("button", "btn", `${n} min`); b.type = "button";
+        b.onclick = () => { const items = planItems(); const fr = frogOf(items); const target = fr && !S.plan.frogDone ? fr : items.find((i) => i.letter === "A" && !i.done) || fr; if (target) startFocus(target, n); else toast("Add a task first"); }; r.append(b); });
+      box.append(r);
+    }
+    box.append(el("span", "what", `Focused today: ${mins} min`));
+  }
+  setInterval(() => { if (S.view === "planner" && focusState()) renderTimer(); }, 1000);
+
   /* ---------- server API ---------- */
   async function api(path, body) {
     const r = await fetch(path, body === undefined ? { headers: { Accept: "application/json" } } : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -670,6 +1012,8 @@ details.orig .body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhe
     S.mailAt = S.slackAt = S.mon.at = st.fetchedAt || 0;
     S.triage = st.triage || null; S.triageAt = st.triageAt || 0;
     S.planning = !!st.planning; S.refreshMin = st.refreshMinutes || 60;
+    S.today = st.today || ""; S.tomorrow = st.tomorrow || ""; S.streak = st.frogStreak || 0;
+    if (st.planner) { S.plan = st.planner.today; S.planT = st.planner.tomorrow; }
     handled = st.handled || {}; ticks = st.ticks || {}; store.set("handled", handled); store.set("ticks", ticks);
     S.loading = !st.fetchedAt;
     if (st.planError) { $("pageBanner").textContent = "Claude couldn't build the plan last time: " + st.planError; $("pageBanner").hidden = false; } else $("pageBanner").hidden = true;
@@ -734,11 +1078,20 @@ details.orig .body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhe
     finally { b.disabled = false; clearTimeout(load._t); load._t = setTimeout(load, 20000); }
   };
   $("retriage").onclick = () => runTriage();
+  document.querySelectorAll(".views button").forEach((b) => b.onclick = () => setView(b.dataset.view));
+  window.addEventListener("hashchange", () => setView(location.hash === "#planner" ? "planner" : "inbox", true));
+  $("addTask").onsubmit = (e) => {
+    e.preventDefault(); const text = $("newTask").value.trim(); if (!text || !S.plan) return;
+    const tasks = [...(S.plan.tasks || []), { id: "p:" + Date.now().toString(36), text, abc: $("newAbc").value, done: false }];
+    planPatch(S.today, { tasks }); $("newTask").value = ""; toast("Task added");
+  };
+  if (location.hash === "#planner") setView("planner", true);
   const moveSel = (dir) => { const order = navOrder(); if (!order.length) return; const idx = order.findIndex((i) => i.key === S.selected);
     const n = order[Math.max(0, Math.min(order.length - 1, idx < 0 ? 0 : idx + dir))]; select(n.key);
     const r = document.querySelector(`.row[data-key="${CSS.escape(n.key)}"]`); r && r.scrollIntoView({ block: "nearest" }); };
   document.addEventListener("keydown", (e) => {
     const tag = (e.target.tagName || "").toLowerCase();
+    if (S.view === "planner" && tag !== "input" && tag !== "textarea" && tag !== "select") return;
     if (tag === "input" || tag === "textarea") { if (e.key === "Escape") e.target.blur(); return; }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); moveSel(1); }

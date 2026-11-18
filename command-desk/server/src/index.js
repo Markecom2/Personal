@@ -23,6 +23,10 @@ const live = {
 };
 
 const hourIn = (tz) => Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: tz }).format(new Date()));
+const dateIn = (tz, offsetDays = 0) => {
+  const d = new Date(Date.now() + offsetDays * 864e5);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+};
 const inWorkHours = () => { const h = hourIn(TZ); return h >= WORK_START && h < WORK_END; };
 
 async function settle(label, icon, fn) {
@@ -90,7 +94,8 @@ async function replan() {
       .filter((i) => !handled[i.key] && !(i.kind === "task" && /de-prioriti/i.test(i.status)))
       .sort((a, b) => b.time - a.time).slice(0, 90);
     if (!items.length) return;
-    try { store.setTriage(await claude.triage(items, TZ)); live.planError = null; }
+    const ownTasks = store.planDoc(dateIn(TZ)).tasks || [];
+    try { store.setTriage(await claude.triage(items, TZ, ownTasks)); live.planError = null; }
     catch (e) { live.planError = e.message; console.error("[Claude]", e.message); }
   })().finally(() => { live.planning = null; });
   return live.planning;
@@ -127,7 +132,10 @@ function snapshot() {
     fetchedAt: live.fetchedAt, refreshing: !!live.refreshing, planning: !!live.planning, planError: live.planError,
     claude: claude.enabled(), sources: live.sources,
     accounts: live.accounts, mail: live.mail, slack: live.slack, mon: live.mon,
-    triage: st.triage, triageAt: st.triageAt, handled: st.handled, ticks: st.ticks
+    triage: st.triage, triageAt: st.triageAt, handled: st.handled, ticks: st.ticks,
+    today: dateIn(TZ), tomorrow: dateIn(TZ, 1),
+    planner: { today: store.planDoc(dateIn(TZ)), tomorrow: store.planDoc(dateIn(TZ, 1)) },
+    frogStreak: store.frogStreak(dateIn(TZ))
   };
 }
 const findItem = (key) => allItems().find((i) => i.key === key);
@@ -144,6 +152,25 @@ app.post("/api/mark", (req, res) => { store.setHandled(String(req.body.key || ""
 app.post("/api/ticks", (req, res) => {
   const steps = Array.isArray(req.body.steps) ? req.body.steps.map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n < 10) : [];
   store.setTicks(String(req.body.key || ""), steps); res.json({ ok: true });
+});
+// Planner: patch today's or tomorrow's doc. Only known fields, sanitised.
+app.post("/api/planner", (req, res) => {
+  const date = String(req.body.date || "");
+  if (![dateIn(TZ), dateIn(TZ, 1)].includes(date)) return res.status(400).json({ error: "Only today and tomorrow can be planned." });
+  const p = req.body.patch || {}, out = {};
+  const letter = (v) => (["A", "B", "C", "D", "E"].includes(v) ? v : null);
+  if ("frog" in p) out.frog = p.frog ? String(p.frog).slice(0, 80) : null;
+  if ("frogTitle" in p) out.frogTitle = String(p.frogTitle || "").slice(0, 200);
+  if ("frogDone" in p) { out.frogDone = !!p.frogDone; out.frogDoneAt = p.frogDone ? Date.now() : 0; }
+  if (p.abc && typeof p.abc === "object") out.abc = Object.fromEntries(Object.entries(p.abc).slice(0, 300).map(([k, v]) => [String(k).slice(0, 80), letter(v)]).filter(([, v]) => v));
+  if (p.order && typeof p.order === "object") out.order = Object.fromEntries(["A", "B", "C", "D", "E"].map((l) => [l, (Array.isArray(p.order[l]) ? p.order[l] : []).slice(0, 200).map((k) => String(k).slice(0, 80))]));
+  if (Array.isArray(p.tasks)) out.tasks = p.tasks.slice(0, 100).map((t) => ({
+    id: /^p:[\w-]{1,40}$/.test(t.id) ? t.id : "p:" + Math.random().toString(36).slice(2, 10),
+    text: String(t.text || "").slice(0, 300), abc: letter(t.abc) || "B", done: !!t.done, delegateTo: String(t.delegateTo || "").slice(0, 60)
+  })).filter((t) => t.text.trim());
+  if ("notes" in p) out.notes = String(p.notes || "").slice(0, 5000);
+  if (Array.isArray(p.focus)) out.focus = p.focus.slice(-50).map((f) => ({ key: String(f.key || "").slice(0, 80), start: Number(f.start) || 0, minutes: Math.min(240, Number(f.minutes) || 0) }));
+  res.json({ doc: store.patchPlan(date, out), frogStreak: store.frogStreak(dateIn(TZ)) });
 });
 app.post("/api/draft", async (req, res) => {
   const item = findItem(String(req.body.key || ""));
