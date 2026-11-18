@@ -87,11 +87,16 @@ Each hourly plan reads up to ~90 items; expect very roughly $2–4 a day for 14 
    ```
    Copy `refresh_token` from the reply into `ZOHO_REFRESH_TOKEN`.
 
-**Slack.** The token decides which workspace you see (client work is in **stonebridgecrew**).
-1. https://api.slack.com/apps → Create New App → From scratch → name "Command Desk", workspace stonebridgecrew.
+**Slack (one token per workspace).** Repeat for each workspace:
+1. https://api.slack.com/apps → Create New App → From scratch → name "Command Desk", choose the workspace.
 2. OAuth & Permissions → **User Token Scopes**: `search:read`, `chat:write`, `users:read`.
 3. Install to Workspace (a workspace admin may need to approve). Copy the **User OAuth Token** (`xoxp-...`).
    Replies are posted as you.
+
+Then set:
+```
+SLACK_ACCOUNTS=[{"label":"Workspace one","token":"xoxp-..."},{"label":"Workspace two","token":"xoxp-..."}]
+```
 
 **Monday.com (one token per account).** In each account (venuescale, moodcreative-company,
 the-great-escape-gang): click your avatar → **Developers** → **My access tokens** → copy. Then set:
