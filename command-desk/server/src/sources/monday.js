@@ -97,11 +97,29 @@ export async function readAccount(acct, primary) {
   }
   const cutoff = Date.now() - 3 * 864e5;
   const tasks = [], updates = [];
+  // Everyone assigned to a task (plus the token's owner) counts as the team; anyone else posting is the client.
+  const team = new Set();
+  try { const { me } = await gql(acct, `{ me { name } }`); if (me?.name) team.add(me.name.toLowerCase()); } catch {}
+  for (const b of boards) for (const it of b.items_page?.items || []) for (const c of it.column_values || [])
+    if (/people|person/.test(c.type) && c.text) for (const n of c.text.split(",")) if (n.trim()) team.add(n.trim().toLowerCase());
+  const isClient = (name) => !!name && !team.has(String(name).trim().toLowerCase());
   for (const b of boards) {
     const items = b.items_page?.items || [], assigned = new Set(items.map((it) => String(it.id)));
+    // Items with a recent post from the client, newest entry of each thread
+    const clientReplied = new Set();
+    for (const u of b.updates || []) {
+      const entries = [u, ...(Array.isArray(u.replies) ? u.replies : [])];
+      if (entries.some((e) => isClient(e.creator?.name) && (Date.parse(e.created_at) || 0) >= cutoff)) clientReplied.add(String(u.item_id));
+    }
     for (const it of items) {
       const t = toTask(acct, b, it);
-      if (!/^done$/i.test(t.status) && !/complete/i.test(t.group)) tasks.push(t);
+      if (/^done$/i.test(t.status) || /complete/i.test(t.group)) continue;
+      // Submitted for review = finished on our side. Only show it again when the client has replied.
+      if (/review/i.test(t.status) || /review/i.test(t.group)) {
+        if (!clientReplied.has(String(it.id))) continue;
+        t.clientReplied = true; t.preview = "Client replied\n" + t.preview;
+      }
+      tasks.push(t);
     }
     for (const u of b.updates || []) {
       if (acct.onlyMine && !assigned.has(String(u.item_id))) continue;
