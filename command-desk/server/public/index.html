@@ -476,6 +476,43 @@ details.rule p{margin:8px 0 0}
   .task-panel .btn{min-height:38px}
   .tl-head{padding:10px 12px}
 }
+
+/* ---------- The little Buddha guide: walks along the bottom of every page and shares a thought ---------- */
+.mascot{position:fixed;left:244px;right:0;bottom:0;height:170px;z-index:11;pointer-events:none}
+.mascot[hidden],.m-show[hidden]{display:none}
+.m-stage{position:absolute;inset:0;overflow:hidden}
+.m-shadow{position:absolute;bottom:4px;left:0;border-radius:50%;background:radial-gradient(closest-side,rgba(15,23,42,.32),rgba(15,23,42,0))}
+.m-body{position:absolute;bottom:8px;left:0;will-change:transform}
+.m-body img{display:block;width:100%;height:100%;object-fit:contain;object-position:bottom;transform-origin:50% 100%;filter:drop-shadow(0 6px 10px rgba(15,23,42,.18));user-select:none;-webkit-user-select:none}
+.m-body .m-flat{display:grid;place-items:end center;height:100%;font-size:64px;line-height:1}
+.m-hit{pointer-events:auto;position:absolute;bottom:8px;left:0;width:100px;height:150px;border:0;padding:0;background:transparent;border-radius:999px;cursor:pointer}
+.m-hit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.m-bubble{pointer-events:auto;position:absolute;bottom:162px;left:0;width:min(330px,calc(100vw - 16px));box-sizing:border-box;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:12px 14px;box-shadow:0 12px 32px rgba(15,23,42,.18)}
+.m-bubble::after{content:"";position:absolute;left:calc(var(--tail,48px) - 8px);bottom:-8px;width:14px;height:14px;background:var(--surface);border-right:1px solid var(--line);border-bottom:1px solid var(--line);transform:rotate(45deg)}
+.m-bubble[hidden]{display:none}
+.m-hi{margin:0 0 6px;font-weight:700}
+.m-bubble blockquote{margin:0;display:grid;gap:4px}
+.m-bubble blockquote p{margin:0;font-size:15px;line-height:1.45}
+.m-bubble footer{font-size:12px;color:var(--muted)}
+.m-actions{display:flex;align-items:center;gap:10px;margin-top:10px}
+.m-actions .btn{padding:4px 12px;font-size:13px}
+.m-link{border:0;background:transparent;padding:4px 2px;font:inherit;font-size:12px;color:var(--muted);cursor:pointer}
+.m-link:hover{color:var(--ink)}
+.m-actions .m-link:first-of-type{margin-left:auto}
+.m-show{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:11;width:48px;height:48px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--surface);box-shadow:0 6px 18px rgba(15,23,42,.16);overflow:hidden;display:grid;place-items:center;cursor:pointer}
+.m-show img{height:44px;width:auto;transform:translateY(5px)}
+.toast{z-index:20}
+.main{padding-bottom:180px}
+@media (prefers-reduced-motion:no-preference){.m-bubble.pop{animation:m-pop .35s ease-out}@keyframes m-pop{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}}
+@media (max-width:1179px){.mascot{left:0}}
+@media (max-width:900px){
+  .mascot{bottom:calc(57px + env(safe-area-inset-bottom,0px));height:150px}
+  .m-hit{height:112px;width:84px}
+  .m-bubble{bottom:124px}
+  .m-show{bottom:calc(68px + env(safe-area-inset-bottom,0px))}
+  .main{padding-bottom:calc(220px + env(safe-area-inset-bottom,0px))}
+  body:has(.split.show-detail) .mascot{display:none}
+}
 </style>
 </head><body>
 <div class="app">
@@ -1454,6 +1491,158 @@ details.rule p{margin:8px 0 0}
   });
   setInterval(renderHeader, 30000);
 
+  /* ---------- The little Buddha guide ----------
+     He walks along the bottom of every page. Every 40 seconds he strolls somewhere new, bows and shares a
+     thought about focus, consistency or mindset; a tap makes him hop and offer another. He greets you once per
+     visit, can be put away, and this browser remembers that. With reduced motion he stays put. */
+  // Tips are the desk's own words. Quotes carry the name they're known by; where the source is uncertain, it says so.
+  const THOUGHTS = [
+    { text: "Do the top task before you open email or Slack. The inbox will still be there in an hour." },
+    { text: "One task on the screen. Everything else can wait 25 minutes." },
+    { text: "A distracting thought is not an instruction. Write it down and go back to the task." },
+    { text: "Check messages at set times, not every time something pings." },
+    { text: "Close the tabs this task doesn't need. Every open tab is a small knock on the door." },
+    { text: "When you feel stuck, make the next step smaller, then take it." },
+    { text: "Spend your sharpest hours on your hardest task. Save the easy ones for when you're tired." },
+    { text: "Consistency beats intensity. A steady day, repeated, beats a heroic one you can't repeat." },
+    { text: "You don't have to feel ready. Start for five minutes and let momentum do the rest." },
+    { text: "Busy is not the same as useful. Ask what this task moves forward." },
+    { text: "Finish one thing before starting the next. Half-done work weighs on the mind." },
+    { text: "A short walk, a glass of water and three slow breaths fix more than you'd think." },
+    { text: "Plan tomorrow tonight. A morning that starts with a decision already made starts faster." },
+    { text: "Saying no to a small request is saying yes to the work that matters." },
+    { text: "Judge the day by whether you did what you planned, not by how busy you felt." },
+    { text: "Mind is the forerunner of all actions.", by: "Dhammapada, verse 1" },
+    { text: "Drop by drop is the water pot filled.", by: "Dhammapada, verse 122" },
+    { text: "We are what we repeatedly do. Excellence, then, is not an act, but a habit.", by: "Will Durant, summarizing Aristotle" },
+    { text: "Success is the sum of small efforts, repeated day in and day out.", by: "Robert Collier" },
+    { text: "Small disciplines repeated with consistency every day lead to great achievements gained slowly over time.", by: "John C. Maxwell" },
+    { text: "You can do anything, but not everything.", by: "David Allen" },
+    { text: "The key is not to prioritize what's on your schedule, but to schedule your priorities.", by: "Stephen R. Covey" },
+    { text: "Until we can manage time, we can manage nothing else.", by: "Peter Drucker" },
+    { text: "Simplicity boils down to two steps: Identify the essential. Eliminate the rest.", by: "Leo Babauta" },
+    { text: "Almost everything will work again if you unplug it for a few minutes, including you.", by: "Anne Lamott" },
+    { text: "It is not enough to be busy. So are the ants. The question is: What are we busy about?", by: "Henry David Thoreau" },
+    { text: "The secret of getting ahead is getting started.", by: "Often attributed to Mark Twain" },
+    { text: "If you chase two rabbits, you will not catch either one.", by: "Proverb" }
+  ];
+
+  function startGuide() {
+    const HIDE = "cd:buddha", HELLO = "cd:buddha-hello", SRC = "mascot/buddha.webp";
+    const read = (store, k) => { try { return store.getItem(k); } catch { return null; } };
+    const write = (store, k, v) => { try { store.setItem(k, v); } catch { /* not remembered */ } };
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const floor = el("div", "mascot"), stage = el("div", "m-stage"), shadow = el("div", "m-shadow"), body = el("div", "m-body"), img = el("img");
+    floor.setAttribute("role", "complementary"); floor.setAttribute("aria-label", "A little Buddha guide");
+    img.src = SRC; img.alt = ""; img.draggable = false;
+    img.onerror = () => { img.remove(); body.append(el("span", "m-flat", "🙏")); };
+    body.append(img); stage.append(shadow, body);
+    const hit = el("button", "m-hit"); hit.type = "button"; hit.setAttribute("aria-label", "A little Buddha guide. Tap for another thought.");
+    const bubble = el("div", "m-bubble"); bubble.setAttribute("role", "status"); bubble.setAttribute("aria-live", "polite"); bubble.hidden = true;
+    floor.append(stage, hit, bubble);
+    const back = el("button", "m-show"); back.type = "button"; back.setAttribute("aria-label", "Bring back the guide"); back.title = "Bring back the guide";
+    const backImg = el("img"); backImg.src = SRC; backImg.alt = ""; back.append(backImg);
+    document.body.append(floor, back);
+
+    let k = -1, x = 0, target = 0, mode = "idle", facing = 1, phase = 0, since = 0, presented = false, pointer = null, frame = 0, timer = 0, last = 0;
+    let hello = read(sessionStorage, HELLO) !== "done";
+    const height = () => (innerWidth < 640 ? 112 : 150);
+    const width = () => floor.clientWidth || innerWidth;
+    const margin = () => Math.max(60, height() * 0.45);
+    const spot = (f) => margin() + f * Math.max(0, width() - 2 * margin());
+    const pick = () => { let n = Math.floor(Math.random() * THOUGHTS.length); if (n === k) n = (n + 1) % THOUGHTS.length; k = n; };
+    const busyReading = () => bubble.matches(":hover") || bubble.contains(document.activeElement);
+    const sayHello = () => { if (hello) { hello = false; write(sessionStorage, HELLO, "done"); } };
+
+    function size() {
+      const h = height();
+      body.style.height = h + "px"; body.style.width = h * 0.64 + "px";
+      shadow.style.width = h * 0.5 + "px"; shadow.style.height = h * 0.07 + "px";
+    }
+    function fill() {
+      bubble.replaceChildren();
+      if (hello) { const h = new Date().getHours(); bubble.append(el("p", "m-hi", `${h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"}, Mark! 🙏`)); }
+      const t = THOUGHTS[k], q = el("blockquote");
+      q.append(el("p", null, `“${t.text}”`)); if (t.by) q.append(el("footer", null, "— " + t.by));
+      const row = el("div", "m-actions");
+      const add = (cls, label, fn) => { const b = el("button", cls, label); b.type = "button"; b.onclick = fn; row.append(b); };
+      add("btn", "Another", () => act("walk"));
+      add("m-link", "Close", () => { sayHello(); bubble.hidden = true; hit.focus(); });
+      add("m-link", "Put him away", () => setHidden(true));
+      bubble.append(q, row);
+    }
+    function present() { fill(); bubble.hidden = false; bubble.classList.remove("pop"); void bubble.offsetWidth; bubble.classList.add("pop"); place(); }
+    function place() {
+      hit.style.left = x - hit.offsetWidth / 2 + "px";
+      if (bubble.hidden) return;
+      const left = Math.min(Math.max(8, x - 48), width() - bubble.offsetWidth - 8);
+      bubble.style.left = left + "px"; bubble.style.setProperty("--tail", `${Math.max(18, Math.min(bubble.offsetWidth - 18, x - left))}px`);
+    }
+    // kind: "walk" goes somewhere new first, "hop" jumps where he stands.
+    function act(kind) {
+      if (kind !== "auto") sayHello();
+      pick(); bubble.hidden = true; presented = false; since = 0;
+      if (still) mode = "bow";
+      else if (kind === "hop") mode = "hop";
+      else {
+        let n = spot(0.05 + Math.random() * 0.9);
+        if (Math.abs(n - x) < width() * 0.2) n = spot(x > width() / 2 ? 0.05 + Math.random() * 0.3 : 0.65 + Math.random() * 0.3);
+        target = n; mode = "walk";
+      }
+      clearInterval(timer); timer = setInterval(() => { if (!document.hidden && !busyReading()) act("auto"); }, 40000);
+    }
+    function pose(since, phase) {
+      if (mode === "walk") return { lift: Math.abs(Math.sin(phase)) * 6, tilt: Math.sin(phase) * 3, squash: 1 - Math.abs(Math.cos(phase)) * 0.02 };
+      if (mode === "hop") { const p = Math.min(1, since / 0.55); return { lift: Math.sin(p * Math.PI) * 38, tilt: 0, squash: p > 0.85 ? 0.94 : 1.03 }; }
+      if (mode === "bow") return { lift: 0, tilt: still ? 0 : Math.sin(Math.min(1, since / 0.9) * Math.PI) * 9, squash: 1 };
+      return { lift: 0, tilt: 0, squash: 1 };
+    }
+    function tick(now) {
+      frame = requestAnimationFrame(tick);
+      const dt = Math.min((now - last) / 1000, 0.05); last = now; since += dt;
+      if (mode === "walk") {
+        const dir = Math.sign(target - x) || 1; facing = dir;
+        x += dir * Math.min(Math.abs(target - x), dt * Math.max(120, width() * 0.11)); phase += dt * 10;
+        if (Math.abs(target - x) < 0.5) { mode = "settle"; since = 0; }
+      } else if (mode === "settle" && since > 0.2) { mode = "bow"; since = 0; }
+      else if (mode === "hop" && since > 0.55) { mode = "bow"; since = 0; }
+      else if (mode === "bow") {
+        if (!presented) { presented = true; present(); }
+        if (since > 0.9) { mode = "idle"; since = 0; }
+      }
+      if (mode === "idle" || mode === "settle") { const toward = pointer ?? width() / 2; if (Math.abs(toward - x) > 30) facing = toward > x ? 1 : -1; }
+      const p = pose(since, phase), h = height();
+      const breathe = mode === "idle" && !still ? 1 + Math.sin(now / 450) * 0.012 : 1, sway = mode === "idle" && !still ? Math.sin(now / 1300) * 1.2 : 0;
+      body.style.transform = `translate3d(${x - h * 0.32}px, ${-p.lift}px, 0)`;
+      const fig = body.firstElementChild; if (fig) fig.style.transform = `scaleX(${facing}) rotate(${p.tilt + sway}deg) scaleY(${p.squash * breathe})`;
+      shadow.style.transform = `translate3d(${x - h * 0.25}px, 0, 0) scale(${1 - p.lift / 90})`;
+      shadow.style.opacity = String(Math.max(0.25, 1 - p.lift / 50));
+      place();
+    }
+    function start() {
+      size(); pick();
+      x = still ? spot(0.08) : -height(); target = spot(0.08); mode = still ? "bow" : "walk"; since = 0; presented = false;
+      last = performance.now(); cancelAnimationFrame(frame); frame = requestAnimationFrame(tick);
+      clearInterval(timer); timer = setInterval(() => { if (!document.hidden && !busyReading()) act("auto"); }, 40000);
+    }
+    function stop() { cancelAnimationFrame(frame); clearInterval(timer); bubble.hidden = true; }
+    function setHidden(v) {
+      write(localStorage, HIDE, v ? "hidden" : "shown");
+      floor.hidden = v; back.hidden = !v;
+      if (v) { stop(); back.focus(); } else { start(); hit.focus(); }
+    }
+
+    hit.onclick = () => act("hop");
+    back.onclick = () => setHidden(false);
+    addEventListener("pointermove", (e) => { const r = floor.getBoundingClientRect(); pointer = e.clientY > r.top - 200 ? e.clientX - r.left : null; }, { passive: true });
+    addEventListener("resize", () => { size(); target = Math.min(target, spot(1)); x = Math.min(x, spot(1)); });
+    const hidden = read(localStorage, HIDE) === "hidden";
+    floor.hidden = hidden; back.hidden = !hidden;
+    if (!hidden) start();
+  }
+
+  startGuide();
   boot();
 })();
 </script>
