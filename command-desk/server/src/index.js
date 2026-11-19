@@ -210,6 +210,11 @@ app.post("/api/reply", async (req, res) => {
   }
 });
 
+// No file extension on purpose: the CloudPanel nginx site answers *.webp, *.png and other asset URLs itself
+// from the site folder (not public/), so an image with an extension never reaches the app.
+const GUIDE_PICTURE = path.join(HERE, "..", "public", "mascot", "buddha.webp");
+app.get("/mascot/buddha", (req, res) => { res.type("image/webp"); res.set("Cache-Control", "private, max-age=86400"); res.sendFile(GUIDE_PICTURE); });
+
 app.use(express.static(path.join(HERE, "..", "public"), { index: "index.html", maxAge: 0 }));
 
 const PORT = Number(process.env.PORT) || 3000;

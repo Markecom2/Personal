@@ -1528,7 +1528,7 @@ details.rule p{margin:8px 0 0}
   ];
 
   function startGuide() {
-    const HIDE = "cd:buddha", HELLO = "cd:buddha-hello", SRC = "mascot/buddha.webp";
+    const HIDE = "cd:buddha", HELLO = "cd:buddha-hello", SRC = "mascot/buddha"; // served by the app (see src/index.js)
     const read = (store, k) => { try { return store.getItem(k); } catch { return null; } };
     const write = (store, k, v) => { try { store.setItem(k, v); } catch { /* not remembered */ } };
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
