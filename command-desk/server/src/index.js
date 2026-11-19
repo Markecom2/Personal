@@ -111,10 +111,18 @@ async function replan() {
   return live.planning;
 }
 
+// Claude builds one plan a day, on the first refresh in work hours (or at start-up), to keep costs low.
+// Later refreshes only fetch mail, Slack and Monday. "Re-plan my day" still asks Claude on demand.
+const plannedToday = () => {
+  const at = store.get().triageAt;
+  return !!at && new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(at)) === dateIn(TZ);
+};
+const dailyPlan = () => (plannedToday() ? null : replan());
+
 async function cycle(force = false) {
   if (!force && !inWorkHours()) return;
   await refresh();
-  await replan();
+  await dailyPlan();
 }
 
 /* ---------------- web app ---------------- */
@@ -151,7 +159,7 @@ function snapshot() {
 const findItem = (key) => allItems().find((i) => i.key === key);
 
 app.get("/api/state", (req, res) => res.json(snapshot()));
-app.post("/api/refresh", async (req, res) => { await refresh(); res.json(snapshot()); replan(); });
+app.post("/api/refresh", async (req, res) => { await refresh(); res.json(snapshot()); dailyPlan(); });
 app.post("/api/replan", async (req, res) => {
   if (!claude.enabled()) return res.status(400).json({ error: "Claude isn't set up on the server (ANTHROPIC_API_KEY)." });
   await replan();
