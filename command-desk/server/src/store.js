@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const FILE = path.resolve(process.env.DATA_DIR || "./data", "state.json");
-let state = { handled: {}, ticks: {}, triage: null, triageAt: 0, planner: {} };
+let state = { handled: {}, ticks: {}, triage: null, triageAt: 0, planner: {}, buckets: {} };
 
 try { state = { ...state, ...JSON.parse(fs.readFileSync(FILE, "utf8")) }; } catch { /* first run */ }
 
@@ -25,6 +25,14 @@ export const store = {
     if (done) state.handled[key] = Date.now(); else delete state.handled[key];
     const cut = Date.now() - 21 * 864e5;
     for (const k in state.handled) if (state.handled[k] < cut) delete state.handled[k];
+    save();
+  },
+  // Which priority bucket you put an incoming task in. Kept across days until you move it; old entries expire.
+  setBucket(key, letter) {
+    state.buckets ||= {};
+    if (letter) state.buckets[key] = { L: letter, at: Date.now() }; else delete state.buckets[key];
+    const cut = Date.now() - 60 * 864e5;
+    for (const k in state.buckets) if (state.buckets[k].at < cut) delete state.buckets[k];
     save();
   },
   setTicks(key, steps) { if (steps.length) state.ticks[key] = steps; else delete state.ticks[key]; save(); },

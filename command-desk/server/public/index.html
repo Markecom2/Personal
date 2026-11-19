@@ -513,6 +513,34 @@ details.rule p{margin:8px 0 0}
   .main{padding-bottom:calc(220px + env(safe-area-inset-bottom,0px))}
   body:has(.split.show-detail) .mascot{display:none}
 }
+
+/* ---------- Latest (unsorted) beside the priority buckets ---------- */
+.sort-grid{display:grid;grid-template-columns:minmax(300px,.95fr) minmax(0,1.35fr);gap:16px;align-items:start}
+.buckets{display:grid;gap:10px;min-width:0}
+.latest{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0}
+.latest-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 16px 4px}
+.latest-h h3{margin:0;font-size:16px}
+.latest-n{font-size:12px;font-weight:700;border-radius:999px;padding:1px 8px;background:var(--accent);color:var(--accent-ink)}
+.latest-n.zero{background:var(--sunk);color:var(--muted)}
+.latest-sub{margin:0;padding:0 16px 10px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line)}
+.lrow{display:grid;grid-template-columns:22px minmax(0,1fr);gap:4px 12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.lrow:last-child{border-bottom:0}
+.lrow:hover{background:var(--raised)}
+.lrow .tt{font-size:15px;overflow-wrap:anywhere}
+.lrow-acts{grid-column:2;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-top:4px}
+.lrow-acts .btn.task-open{margin-right:4px}
+.to-bucket{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 10px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.to-bucket:hover{border-color:var(--accent);color:var(--accent)}
+.to-bucket:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.latest-more{display:block;width:100%;border:0;border-top:1px solid var(--line);background:var(--raised);padding:10px;font:inherit;font-size:13px;font-weight:600;color:var(--accent);cursor:pointer}
+.latest-empty{padding:26px 16px;text-align:center;color:var(--muted)}
+.pl-summary{grid-template-columns:minmax(0,1fr) auto auto auto}
+@media (max-width:900px){
+  .sort-grid{grid-template-columns:minmax(0,1fr)}
+  .pl-summary{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .lrow{padding:12px}
+  .to-bucket{min-height:34px;padding:6px 12px}
+}
 </style>
 </head><body>
 <div class="app">
@@ -622,8 +650,17 @@ details.rule p{margin:8px 0 0}
           <input id="newDue" type="date" title="Due date (optional)">
           <button class="btn primary" type="submit">Add task</button>
         </form>
-        <div class="ptabs" id="planTabs" role="tablist" aria-label="Task priority"></div>
-        <div class="tasklist" id="abcGrid" role="tabpanel" aria-labelledby="planTab-A"></div>
+        <div class="sort-grid">
+          <section class="latest" aria-labelledby="latestH">
+            <div class="latest-h"><h3 id="latestH">Latest</h3><span class="latest-n" id="latestN">0</span></div>
+            <p class="latest-sub">New tasks land here, newest first. Put each one in a bucket.</p>
+            <div id="latestList"></div>
+          </section>
+          <div class="buckets">
+            <div class="ptabs" id="planTabs" role="tablist" aria-label="Task priority"></div>
+            <div class="tasklist" id="abcGrid" role="tabpanel" aria-labelledby="planTab-A"></div>
+          </div>
+        </div>
       </section>
       <section class="pl-sec" id="plTomorrow" aria-labelledby="tmH">
         <div class="abc-h"><h2 id="tmH">Plan tomorrow tonight</h2><span>Ten minutes now saves hours tomorrow.</span></div>
@@ -643,7 +680,7 @@ details.rule p{margin:8px 0 0}
     mon: { boards: [], tasks: {}, updates: {}, err: {}, ctx: {}, at: 0 },
     triage: null, triageAt: 0, planning: false,
     src: "all", tile: null, q: "", showDone: false, selected: null, collapsed: { fyi: true, later: true }, view: "inbox", plan: null, planT: null, today: "", tomorrow: "", streak: 0, collapsedE: true,
-    conn: null, scope: null, showMuted: false, planTab: "A", openRow: null, example: false, loading: true, sending: false, draftCtl: null, confirmFor: null
+    conn: null, scope: null, showMuted: false, buckets: {}, latestShow: 25, planTab: "A", openRow: null, example: false, loading: true, sending: false, draftCtl: null, confirmFor: null
   };
   const RANK = { critical: 0, high: 1, normal: 2, low: 3, fyi: 4 };
   const LABEL = { critical: "Critical", high: "High", normal: "Normal", low: "Low", fyi: "FYI" };
@@ -1134,7 +1171,6 @@ details.rule p{margin:8px 0 0}
   ];
   const LETTERS = ["A", "B", "C", "D", "E"];
   const LETTER_INFO = { A: ["Must do", "Serious consequences if these don't get done today."], B: ["Should do", "Important, but only after your must-dos."], C: ["Could do", "Nice to finish if you have time."], D: ["Hand off", "Someone else can do these. Pass them on early."], E: ["Drop", "Not worth your time. Clear these out."] };
-  const defaultLetter = { critical: "A", high: "B", normal: "C", low: "C", fyi: "E" };
 
   function setView(v, fromHash) {
     S.view = v === "planner" ? "planner" : "inbox";
@@ -1156,16 +1192,16 @@ details.rule p{margin:8px 0 0}
   function planItems() {
     if (!S.plan) return [];
     const abc = S.plan.abc || {};
-    const inbox = ITEMS.filter((i) => !isDone(i.key) && !i.muted).map((i) => ({ ...i, letter: abc[i.key] || (LETTERS.includes(i.abcde) ? i.abcde : defaultLetter[i.urgency] || "C"), own: false }));
+    const inbox = ITEMS.filter((i) => !isDone(i.key) && !i.muted).map((i) => ({ ...i, letter: (S.buckets[i.key] && S.buckets[i.key].L) || abc[i.key] || "N", own: false }));
     const own = (S.plan.tasks || []).map((t) => ({ key: t.id, own: true, title: t.text, done: t.done, letter: abc[t.id] || t.abc || "B", delegateTo: t.delegateTo || "", dueDate: t.due || "", source: "own", time: 0, urgency: "normal" }));
     const all = [...own, ...inbox];
     const order = S.plan.order || {};
     const pos = (it) => { const i = (order[it.letter] || []).indexOf(it.key); return i < 0 ? 1e6 : i; };
-    return all.sort((a, b) => LETTERS.indexOf(a.letter) - LETTERS.indexOf(b.letter) || pos(a) - pos(b) || (a.done - b.done) || (a.dueDate || "9999").localeCompare(b.dueDate || "9999") || RANK[a.urgency] - RANK[b.urgency] || b.time - a.time);
+    return all.sort((a, b) => LETTERS.indexOf(a.letter) - LETTERS.indexOf(b.letter) || pos(a) - pos(b) || (a.done - b.done) || (a.dueDate || "9999").localeCompare(b.dueDate || "9999") || b.time - a.time);
   }
 
   function frogOf(items) {
-    const want = S.plan && S.plan.frog || (S.triage && S.triage.frog && S.triage.frog.id);
+    const want = S.plan && S.plan.frog; // your choice only; otherwise the first open Must do
     let f = want && items.find((i) => i.key === want);
     if (!f && want && S.plan && S.plan.frogDone) f = { key: want, title: (S.plan.frogTitle || "Today's frog"), gone: true };
     if (!f) f = items.find((i) => i.letter === "A" && !i.done);
@@ -1177,9 +1213,13 @@ details.rule p{margin:8px 0 0}
     else { setDone(it.key, done); render(); }
   }
 
+  // Own tasks keep their bucket in today's plan; incoming tasks keep it on the server across days. "N" means back to Latest.
   function setLetter(it, L) {
-    const abc = { ...(S.plan.abc || {}), [it.key]: L };
-    planPatch(S.today, { abc });
+    const abc = { ...(S.plan.abc || {}) };
+    if (it.own) { abc[it.key] = L === "N" ? "B" : L; planPatch(S.today, { abc }); return; }
+    if (L === "N") delete S.buckets[it.key]; else S.buckets[it.key] = { L, at: Date.now() };
+    if (it.key in abc) { delete abc[it.key]; planPatch(S.today, { abc }); } else renderPlanner();
+    api("/api/bucket", { key: it.key, letter: L === "N" ? null : L }).catch((e) => toast(e.message || "Couldn't save that move"));
   }
 
   function move(it, dir, items) {
@@ -1202,17 +1242,15 @@ details.rule p{margin:8px 0 0}
 
     /* frog card */
     const fc = $("frogCard"); fc.replaceChildren(); fc.className = "frog" + (eaten ? " eaten" : "");
-    const tf = S.triage && S.triage.frog && frog && S.triage.frog.id === frog.key ? S.triage.frog : null;
     if (!frog) {
       fc.append(el("span", "eyebrow", "Today's frog"), el("h2", null, S.loading ? "Finding your top task…" : "No top task yet"),
-        el("p", "fwhy", "Add your most important task below as a Must do, or press Re-plan my day and Claude will pick the one that matters most."));
+        el("p", "fwhy", "Put your most important task in Must do, or pick one with ⋯ → Make top task."));
     } else {
       fc.append(el("span", "eyebrow", eaten ? "Top task done 🐸" : "Your top task today 🐸"), el("h2", null, frog.title));
       if (eaten) fc.append(el("p", "fwhy", `Done${S.plan.frogDoneAt ? " at " + new Date(S.plan.frogDoneAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}. The hardest part of your day is behind you. Move on to the next A task.`));
       else {
-        if (tf && tf.why) fc.append(el("p", "fwhy", tf.why));
-        else if (frog.why) fc.append(el("p", "fwhy", frog.why));
-        const step = (tf && tf.firstStep) || (frog.plan && frog.plan[0]);
+        if (frog.why) fc.append(el("p", "fwhy", frog.why));
+        const step = frog.plan && frog.plan[0];
         if (step) { const f = el("div", "first"); f.append(el("b", null, "First step"), document.createTextNode(step)); fc.append(f); }
       }
       const acts = el("div", "acts");
@@ -1263,7 +1301,36 @@ details.rule p{margin:8px 0 0}
     grid.append(head);
     if (!rows.length) grid.append(el("div", "empty-grp", L === "A" ? "Nothing here yet. Add the one thing that would make today a success." : "Nothing here right now."));
     rows.slice(0, 60).forEach((it) => grid.append(taskRow(it, items, frog)));
+    renderLatest(items);
     renderTomorrow(items);
+  }
+
+  // Latest: incoming tasks you haven't sorted yet, newest first, each with one-tap buckets.
+  function renderLatest(items) {
+    const list = $("latestList"), rows = items.filter((i) => i.letter === "N").sort((a, b) => b.time - a.time);
+    const keep = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.sort;
+    $("latestN").textContent = String(rows.length); $("latestN").className = "latest-n" + (rows.length ? "" : " zero");
+    list.replaceChildren();
+    if (!rows.length) { list.append(el("div", "latest-empty", S.loading ? "Loading your tasks…" : "All sorted. New tasks will show up here.")); return; }
+    rows.slice(0, S.latestShow).forEach((it) => {
+      const r = el("div", "lrow");
+      const check = el("input", "task-check"); check.type = "checkbox"; check.setAttribute("aria-label", `Mark done: ${it.title}`);
+      check.onchange = () => { markTaskDone(it, true); toast("Marked done", () => markTaskDone(it, false)); };
+      const body = el("div", "task-body"); body.append(el("span", "tt", it.title));
+      const meta = el("div", "task-meta");
+      const due = dueInfo(it.dueDate); if (due) meta.append(el("span", "tag due " + due.cls, due.text));
+      const src = it.mondayMail ? `Monday · ${it.from}` : it.source === "email" ? "Email · " + it.from : it.source === "slack" ? "Slack · " + it.from : it.kind === "task" ? `Monday · ${it.status || "Task"}` : "Monday · " + it.from;
+      meta.append(el("span", "task-from", src)); if (it.time) meta.append(el("span", null, fmtTime(it.time)));
+      body.append(meta);
+      const acts = el("div", "lrow-acts"), opener = openTaskControl(it); if (opener) acts.append(opener);
+      LETTERS.forEach((L) => { const b = el("button", "to-bucket", LETTER_INFO[L][0]); b.type = "button"; b.dataset.sort = it.key + "|" + L;
+        b.setAttribute("aria-label", `Move to ${LETTER_INFO[L][0]}: ${it.title}`);
+        b.onclick = () => { setLetter(it, L); toast(`Moved to ${LETTER_INFO[L][0]}`, () => setLetter(it, "N")); const nx = list.querySelector(".to-bucket"); nx && nx.focus(); };
+        acts.append(b); });
+      r.append(check, body, acts); list.append(r);
+    });
+    if (rows.length > S.latestShow) { const more = el("button", "latest-more", `Show ${Math.min(25, rows.length - S.latestShow)} more of ${rows.length - S.latestShow}`); more.type = "button"; more.onclick = () => { S.latestShow += 25; renderPlanner(); }; list.append(more); }
+    if (keep) { const b = [...list.querySelectorAll(".to-bucket")].find((x) => x.dataset.sort === keep); b && b.focus(); }
   }
 
   function renderSummary(items) {
@@ -1275,7 +1342,8 @@ details.rule p{margin:8px 0 0}
     top.append(el("b", null, left ? `${left} important task${left === 1 ? "" : "s"} left today` : "All important tasks are done"), el("span", null, `${done} done`));
     fill.style.width = pct + "%"; bar.setAttribute("role", "progressbar"); bar.setAttribute("aria-valuenow", String(pct)); bar.setAttribute("aria-valuemin", "0"); bar.setAttribute("aria-valuemax", "100"); bar.setAttribute("aria-label", "Today's progress"); bar.append(fill); prog.append(top, bar);
     const stat = (n, l) => { const s = el("div", "sum-stat"); s.append(el("b", null, n), el("span", null, l)); return s; };
-    $("plSummary").replaceChildren(prog, stat(`${mins} min`, "focused today"), stat(`${S.streak} day${S.streak === 1 ? "" : "s"}`, "top-task streak"));
+    const unsorted = items.filter((i) => i.letter === "N").length;
+    $("plSummary").replaceChildren(prog, stat(String(unsorted), "to sort"), stat(`${mins} min`, "focused today"), stat(`${S.streak} day${S.streak === 1 ? "" : "s"}`, "top-task streak"));
   }
 
   // Opens where the task came from: Monday or Slack in a new tab, email in the Inbox here. Your own tasks have no source.
@@ -1297,7 +1365,8 @@ details.rule p{margin:8px 0 0}
     const from = it.own ? "Your task" + (it.delegateTo ? " · for " + it.delegateTo : "") : [it.letter === "D" && it.delegateTo ? "Hand to " + it.delegateTo : "", it.mondayMail ? `Monday · ${it.from}` : it.source === "email" ? "Email · " + it.from : it.source === "slack" ? "Slack · " + it.from : it.kind === "task" ? `Monday · ${it.status || "Task"}` : "Monday · " + it.from].filter(Boolean).join(" · ");
     meta.append(el("span", "task-from", from)); body.append(meta);
     const sel = el("select", "task-move"); sel.setAttribute("aria-label", `Priority for ${it.title}`); LETTERS.forEach((l) => sel.append(new Option(LETTER_INFO[l][0], l, false, l === it.letter)));
-    sel.onchange = () => { const name = LETTER_INFO[sel.value][0], was = it.letter; setLetter(it, sel.value); toast(`Moved to ${name}`, () => setLetter(it, was)); };
+    if (!it.own) sel.append(new Option("Back to Latest", "N"));
+    sel.onchange = () => { const name = sel.value === "N" ? "Latest" : LETTER_INFO[sel.value][0], was = it.letter; setLetter(it, sel.value); toast(`Moved to ${name}`, () => setLetter(it, was)); };
     const more = el("button", "task-more", "⋯"); more.type = "button"; more.dataset.more = it.key; more.setAttribute("aria-label", `More actions for ${it.title}`); more.setAttribute("aria-expanded", String(open));
     more.onclick = () => { S.openRow = open ? null : it.key; renderPlanner(); const b = [...document.querySelectorAll(".task-more")].find((x) => x.dataset.more === it.key); b && b.focus(); };
     const ctl = el("div", "task-ctl"), opener = openTaskControl(it); if (opener) ctl.append(opener); ctl.append(sel);
@@ -1391,6 +1460,7 @@ details.rule p{margin:8px 0 0}
     S.planning = !!st.planning; S.refreshMin = st.refreshMinutes || 60;
     S.today = st.today || ""; S.tomorrow = st.tomorrow || ""; S.streak = st.frogStreak || 0;
     if (st.planner) { S.plan = st.planner.today; S.planT = st.planner.tomorrow; }
+    S.buckets = st.buckets || {};
     handled = st.handled || {}; ticks = st.ticks || {}; store.set("handled", handled); store.set("ticks", ticks);
     S.loading = !st.fetchedAt;
     if (st.planError) { $("pageBanner").textContent = "Claude couldn't build the plan last time: " + st.planError; $("pageBanner").hidden = false; } else $("pageBanner").hidden = true;
