@@ -1,7 +1,10 @@
-// Claude: hourly triage (urgency, plan per item, day plan) and short reply drafts.
+// Claude: one triage a day (urgency, plan per item, day plan) and short reply drafts.
 import Anthropic from "@anthropic-ai/sdk";
 
-const MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
+// Haiku is the cheapest model; CLAUDE_MODEL can override it.
+const MODEL = process.env.CLAUDE_MODEL || "claude-haiku-5-5";
+// Haiku has no server-side fallback model, so only ask for one on the larger models.
+const FALLBACK = /haiku/.test(MODEL) ? {} : { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" };
 let client = null;
 export const enabled = () => !!(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
 const api = () => (client ||= new Anthropic());
@@ -37,8 +40,7 @@ async function ask(prompt, { effort, maxTokens, schema }) {
   const res = await api().beta.messages.stream({
     model: MODEL,
     max_tokens: maxTokens,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
+    ...FALLBACK,
     output_config: { effort, ...(schema ? { format: { type: "json_schema", schema } } : {}) },
     messages: [{ role: "user", content: prompt }]
   }).finalMessage();
