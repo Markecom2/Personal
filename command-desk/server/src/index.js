@@ -150,7 +150,7 @@ function snapshot() {
     fetchedAt: live.fetchedAt, refreshing: !!live.refreshing, planning: !!live.planning, planError: live.planError,
     claude: claude.enabled(), sources: live.sources,
     accounts: live.accounts, mail: live.mail, slack: live.slack, mon: live.mon,
-    triage: st.triage, triageAt: st.triageAt, handled: st.handled, ticks: st.ticks,
+    triage: st.triage, triageAt: st.triageAt, handled: st.handled, ticks: st.ticks, buckets: st.buckets || {},
     today: dateIn(TZ), tomorrow: dateIn(TZ, 1),
     planner: { today: store.planDoc(dateIn(TZ)), tomorrow: store.planDoc(dateIn(TZ, 1)) },
     frogStreak: store.frogStreak(dateIn(TZ))
@@ -167,6 +167,12 @@ app.post("/api/replan", async (req, res) => {
   res.json(snapshot());
 });
 app.post("/api/mark", (req, res) => { store.setHandled(String(req.body.key || ""), !!req.body.done); res.json({ ok: true }); });
+app.post("/api/bucket", (req, res) => {
+  const key = String(req.body.key || "").slice(0, 120);
+  if (!key) return res.status(400).json({ error: "key_required" });
+  store.setBucket(key, ["A", "B", "C", "D", "E"].includes(req.body.letter) ? req.body.letter : null);
+  res.json({ ok: true });
+});
 app.post("/api/ticks", (req, res) => {
   const steps = Array.isArray(req.body.steps) ? req.body.steps.map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n < 10) : [];
   store.setTicks(String(req.body.key || ""), steps); res.json({ ok: true });
