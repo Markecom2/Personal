@@ -451,6 +451,9 @@ details.rule p{margin:8px 0 0}
 .tag.top{background:var(--surface);color:var(--accent)}
 .tag.due.late{background:var(--crit-soft);color:var(--crit)}.tag.due.today{background:var(--high-soft);color:var(--high)}.tag.due.soon{background:var(--norm-soft);color:var(--norm)}
 .task-move{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:var(--surface);color:var(--ink);max-width:124px}
+.task-ctl{display:flex;gap:8px;align-items:center;justify-content:flex-end;min-width:0}
+.btn.task-open{padding:5px 11px;font-size:13px;white-space:nowrap;text-decoration:none;color:var(--ink)}
+.btn.task-open:visited{color:var(--ink)}
 .task-more{width:34px;height:34px;border:1px solid var(--line);background:var(--surface);border-radius:8px;font-size:17px;line-height:1;color:var(--muted)}
 .task-more:hover,.task-more[aria-expanded="true"]{border-color:var(--line-strong);color:var(--ink)}
 .task-panel{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:6px;padding-top:6px}
@@ -465,7 +468,9 @@ details.rule p{margin:8px 0 0}
   .add select,.add input[type="date"]{flex:1 1 120px}
   .add .btn{flex:1 1 100%;justify-content:center}
   .task{grid-template-columns:22px minmax(0,1fr) 34px;padding:12px}
-  .task-move{grid-row:2;grid-column:2;justify-self:start;max-width:none;min-height:36px}
+  .task-ctl{grid-row:2;grid-column:2;justify-content:flex-start;flex-wrap:wrap}
+  .task-move{max-width:none;min-height:36px}
+  .btn.task-open{min-height:36px}
   .task-more{grid-row:1;grid-column:3}
   .task-panel{grid-column:2/-1}
   .task-panel .btn{min-height:38px}
@@ -1236,6 +1241,14 @@ details.rule p{margin:8px 0 0}
     $("plSummary").replaceChildren(prog, stat(`${mins} min`, "focused today"), stat(`${S.streak} day${S.streak === 1 ? "" : "s"}`, "top-task streak"));
   }
 
+  // Opens where the task came from: Monday or Slack in a new tab, email in the Inbox here. Your own tasks have no source.
+  function openTaskControl(it) {
+    if (it.own) return null;
+    const where = it.mondayMail || it.source === "monday" ? "Monday" : it.source === "slack" ? "Slack" : "Inbox";
+    if (it.link) { const a = el("a", "btn task-open", "Open task ↗"); a.href = it.link; a.target = "_blank"; a.rel = "noopener"; a.title = `Open in ${where}`; a.setAttribute("aria-label", `Open task in ${where}: ${it.title}`); return a; }
+    const b = el("button", "btn task-open", "Open task"); b.type = "button"; b.title = "Open in the Inbox"; b.setAttribute("aria-label", `Open task in the Inbox: ${it.title}`); b.onclick = () => openInInbox(it.key); return b;
+  }
+
   function taskRow(it, items, frog) {
     const isFrog = !!frog && frog.key === it.key, open = S.openRow === it.key, r = el("div", "task" + (isFrog ? " isfrog" : "") + (it.done ? " is-done" : ""));
     const check = el("input", "task-check"); check.type = "checkbox"; check.checked = !!it.done; check.setAttribute("aria-label", `Mark done: ${it.title}`);
@@ -1250,11 +1263,12 @@ details.rule p{margin:8px 0 0}
     sel.onchange = () => { const name = LETTER_INFO[sel.value][0], was = it.letter; setLetter(it, sel.value); toast(`Moved to ${name}`, () => setLetter(it, was)); };
     const more = el("button", "task-more", "⋯"); more.type = "button"; more.dataset.more = it.key; more.setAttribute("aria-label", `More actions for ${it.title}`); more.setAttribute("aria-expanded", String(open));
     more.onclick = () => { S.openRow = open ? null : it.key; renderPlanner(); const b = [...document.querySelectorAll(".task-more")].find((x) => x.dataset.more === it.key); b && b.focus(); };
-    r.append(check, body, sel, more);
+    const ctl = el("div", "task-ctl"), opener = openTaskControl(it); if (opener) ctl.append(opener); ctl.append(sel);
+    r.append(check, body, ctl, more);
     if (open) { const p = el("div", "task-panel"), act = (label, fn) => { const b = el("button", "btn", label); b.type = "button"; b.onclick = () => { S.openRow = null; fn(); }; p.append(b); };
       if (!it.done && !isFrog) act("🐸 Make top task", () => planPatch(S.today, { frog: it.key, frogDone: false }));
       act("Move up", () => move(it, -1, items)); act("Move down", () => move(it, 1, items));
-      if (!it.own) act(it.letter === "D" ? "Hand off" : "Open message", () => openInInbox(it.key));
+      if (!it.own && it.letter === "D") act("Hand off", () => openInInbox(it.key));
       else act("Delete task", () => { const kept = S.plan.tasks; planPatch(S.today, { tasks: kept.filter((t) => t.id !== it.key) }); toast("Task deleted", () => planPatch(S.today, { tasks: kept })); });
       r.append(p); }
     return r;
