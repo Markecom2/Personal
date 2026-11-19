@@ -14,6 +14,13 @@ export function accounts() {
   return out;
 }
 
+// Only messages involving these people are shown (SLACK_PEOPLE="Mark,Jatin"). Direct and group DMs are always kept,
+// since they are the token owner's own conversations.
+const PEOPLE = (process.env.SLACK_PEOPLE || "Mark,Jatin").split(",").map((s) => s.trim()).filter(Boolean);
+const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const NAME_RE = PEOPLE.length ? new RegExp(`\\b(${PEOPLE.map(escRe).join("|")})\\b`, "i") : null;
+const TEXT_RE = PEOPLE.length ? new RegExp(`\\b(${PEOPLE.map(escRe).join("|")})\\b`) : null; // case-sensitive: "Mark", not "mark as done"
+
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 24);
 
 async function call(acct, method, params, post = false) {
@@ -41,7 +48,7 @@ async function nameFor(acct, id) {
 // "several" adds the workspace name to each message when more than one account is connected.
 export async function recentMessages(acct, several = false) {
   const since = new Date(Date.now() - 2 * 864e5).toISOString().slice(0, 10); // "after:" is exclusive of that day
-  const j = await call(acct, "search.messages", { query: `after:${since}`, sort: "timestamp", sort_dir: "desc", count: "30" });
+  const j = await call(acct, "search.messages", { query: `after:${since}`, sort: "timestamp", sort_dir: "desc", count: "100" });
   const cutoff = Date.now() - 24 * 3600 * 1000;
   const out = [];
   for (const m of j.messages?.matches || []) {
@@ -50,9 +57,15 @@ export async function recentMessages(acct, several = false) {
     const permalink = m.permalink || "";
     let text = emo(m.text || "");
     // Resolve <@U123> mentions to names, <url|label> to label.
-    for (const id of [...new Set([...text.matchAll(/<@([A-Z0-9]+)>/g)].map((x) => x[1]))]) text = text.replaceAll(`<@${id}>`, "@" + await nameFor(acct, id));
+    const mentioned = [];
+    for (const id of [...new Set([...text.matchAll(/<@([A-Z0-9]+)>/g)].map((x) => x[1]))]) { const n = await nameFor(acct, id); mentioned.push(n); text = text.replaceAll(`<@${id}>`, "@" + n); }
     text = text.replace(/<(https?:[^>|]+)\|([^>]+)>/g, "$2 ($1)").replace(/<(https?:[^>]+)>/g, "$1").trim();
     const ch = m.channel || {};
+    if (NAME_RE && !ch.is_im && !ch.is_mpim) {
+      const authors = [m.username, m.user ? await nameFor(acct, m.user) : ""].filter(Boolean);
+      const involved = authors.some((n) => NAME_RE.test(n)) || mentioned.some((n) => NAME_RE.test(n)) || TEXT_RE.test(text);
+      if (!involved) continue;
+    }
     const place = ch.is_im ? "DM" : ch.is_mpim ? "group DM" : (ch.name || "channel");
     out.push({
       key: `s:${slug(acct.label)}:${ch.id || ""}:${m.ts}`, source: "slack", server: acct.label, channelId: ch.id, ts: m.ts,
