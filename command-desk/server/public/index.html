@@ -652,8 +652,8 @@ details.rule p{margin:8px 0 0}
         </form>
         <div class="sort-grid">
           <section class="latest" aria-labelledby="latestH">
-            <div class="latest-h"><h3 id="latestH">Latest</h3><span class="latest-n" id="latestN">0</span></div>
-            <p class="latest-sub">New tasks land here, newest first. Put each one in a bucket.</p>
+            <div class="latest-h"><h3 id="latestH">Unread</h3><span class="latest-n" id="latestN">0</span></div>
+            <p class="latest-sub">New messages and tasks land here, newest first. Put each one in a bucket. A new reply brings it back here.</p>
             <div id="latestList"></div>
           </section>
           <div class="buckets">
@@ -1343,7 +1343,7 @@ details.rule p{margin:8px 0 0}
     fill.style.width = pct + "%"; bar.setAttribute("role", "progressbar"); bar.setAttribute("aria-valuenow", String(pct)); bar.setAttribute("aria-valuemin", "0"); bar.setAttribute("aria-valuemax", "100"); bar.setAttribute("aria-label", "Today's progress"); bar.append(fill); prog.append(top, bar);
     const stat = (n, l) => { const s = el("div", "sum-stat"); s.append(el("b", null, n), el("span", null, l)); return s; };
     const unsorted = items.filter((i) => i.letter === "N").length;
-    $("plSummary").replaceChildren(prog, stat(String(unsorted), "to sort"), stat(`${mins} min`, "focused today"), stat(`${S.streak} day${S.streak === 1 ? "" : "s"}`, "top-task streak"));
+    $("plSummary").replaceChildren(prog, stat(String(unsorted), "unread"), stat(`${mins} min`, "focused today"), stat(`${S.streak} day${S.streak === 1 ? "" : "s"}`, "top-task streak"));
   }
 
   // Opens where the task came from: Monday or Slack in a new tab, email in the Inbox here. Your own tasks have no source.
@@ -1365,8 +1365,8 @@ details.rule p{margin:8px 0 0}
     const from = it.own ? "Your task" + (it.delegateTo ? " · for " + it.delegateTo : "") : [it.letter === "D" && it.delegateTo ? "Hand to " + it.delegateTo : "", it.mondayMail ? `Monday · ${it.from}` : it.source === "email" ? "Email · " + it.from : it.source === "slack" ? "Slack · " + it.from : it.kind === "task" ? `Monday · ${it.status || "Task"}` : "Monday · " + it.from].filter(Boolean).join(" · ");
     meta.append(el("span", "task-from", from)); body.append(meta);
     const sel = el("select", "task-move"); sel.setAttribute("aria-label", `Priority for ${it.title}`); LETTERS.forEach((l) => sel.append(new Option(LETTER_INFO[l][0], l, false, l === it.letter)));
-    if (!it.own) sel.append(new Option("Back to Latest", "N"));
-    sel.onchange = () => { const name = sel.value === "N" ? "Latest" : LETTER_INFO[sel.value][0], was = it.letter; setLetter(it, sel.value); toast(`Moved to ${name}`, () => setLetter(it, was)); };
+    if (!it.own) sel.append(new Option("Back to Unread", "N"));
+    sel.onchange = () => { const name = sel.value === "N" ? "Unread" : LETTER_INFO[sel.value][0], was = it.letter; setLetter(it, sel.value); toast(`Moved to ${name}`, () => setLetter(it, was)); };
     const more = el("button", "task-more", "⋯"); more.type = "button"; more.dataset.more = it.key; more.setAttribute("aria-label", `More actions for ${it.title}`); more.setAttribute("aria-expanded", String(open));
     more.onclick = () => { S.openRow = open ? null : it.key; renderPlanner(); const b = [...document.querySelectorAll(".task-more")].find((x) => x.dataset.more === it.key); b && b.focus(); };
     const ctl = el("div", "task-ctl"), opener = openTaskControl(it); if (opener) ctl.append(opener); ctl.append(sel);

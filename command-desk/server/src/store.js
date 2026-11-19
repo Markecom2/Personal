@@ -35,6 +35,17 @@ export const store = {
     for (const k in state.buckets) if (state.buckets[k].at < cut) delete state.buckets[k];
     save();
   },
+  // A new message on a thread you already sorted or handled puts it back in Unread.
+  reopen(items) {
+    let changed = false;
+    for (const i of items) {
+      const t = Number(i.activity) || 0; if (!t) continue;
+      if (state.handled[i.key] && state.handled[i.key] < t) { delete state.handled[i.key]; changed = true; }
+      if (state.buckets?.[i.key] && state.buckets[i.key].at < t) { delete state.buckets[i.key]; changed = true; }
+    }
+    if (changed) save();
+    return changed;
+  },
   setTicks(key, steps) { if (steps.length) state.ticks[key] = steps; else delete state.ticks[key]; save(); },
   setTriage(t) { state.triage = t; state.triageAt = Date.now(); save(); },
   // Daily planner (Eat That Frog): one doc per date "YYYY-MM-DD".

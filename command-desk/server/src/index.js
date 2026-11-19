@@ -85,6 +85,7 @@ async function refresh() {
       }
     }
     live.mon = mon;
+    store.reopen([...mon.tasks, ...mon.updates]);
     live.sources = sources;
     live.fetchedAt = Date.now();
   })().finally(() => { live.refreshing = null; });
