@@ -768,7 +768,7 @@ details.rule p{margin:8px 0 0}
     const who = String(m.from).replace(/\s+via monday\.com$/i, "");
     const kind = (m.subject.match(/^\[([^\]]+)\]/) || [])[1] || "Update";
     const subject = m.subject.replace(/^\[[^\]]+\]\s*/, "").replace(/&quot;/g, "\"").replace(/&#39;/g, "'");
-    return { ...m, mondayMail: true, from: who, monKind: kind, subject: `${kind}: ${subject}`, monAcct: acct ? acct.label : "Monday (other account)", link: acct ? acct.url : "", client: acct ? acct.label : "" };
+    return { ...m, mondayMail: true, from: who, monKind: kind, subject: `${kind}: ${subject}`, monAcct: acct ? acct.label : "Monday (other account)", link: m.mondayLink || (acct ? acct.url : ""), client: acct ? acct.label : "" };
   }
   function parseSlack(payload) {
     const md = typeof payload === "string" ? payload : (payload && payload.results) || "";
@@ -1074,7 +1074,7 @@ details.rule p{margin:8px 0 0}
     else meta.append(el("span", null, it.kind === "task" ? `Assigned to ${it.from}` : `Latest from ${it.from}`), el("span", null, it.board));
     if (it.dueNote) meta.append(el("span", null, it.dueNote));
     meta.append(el("span", null, fmtTime(it.time)));
-    if (it.link) { const a = el("a", null, it.mondayMail ? `Open ${it.monAcct} in Monday ↗` : it.source === "monday" ? "Open in Monday ↗" : "Open in Slack ↗"); a.href = it.link; a.target = "_blank"; a.rel = "noopener"; meta.append(a); }
+    if (it.link) { const a = el("a", null, it.mondayMail ? (it.mondayLink ? "Open in Monday ↗" : `Open ${it.monAcct} in Monday ↗`) : it.source === "monday" ? "Open in Monday ↗" : "Open in Slack ↗"); a.href = it.link; a.target = "_blank"; a.rel = "noopener"; meta.append(a); }
     top.append(meta); sc.append(top);
 
     if (it.why) { const w = el("div", "why"); w.append(el("b", null, "Why it matters"), document.createTextNode(it.why)); sc.append(w); }
@@ -1100,6 +1100,7 @@ details.rule p{margin:8px 0 0}
     sc.append(det);
 
     const actions = el("div", "chips");
+    if (it.link) { const where = it.mondayMail || it.source === "monday" ? "Monday" : "Slack", o = el("a", "btn task-open", "Open task ↗"); o.href = it.link; o.target = "_blank"; o.rel = "noopener"; o.title = `Open in ${where}`; o.setAttribute("aria-label", `Open task in ${where}`); actions.append(o); }
     const doneBtn = el("button", "btn", isDone(it.key) ? "Mark as not handled" : "✓ Mark as handled"); doneBtn.type = "button"; doneBtn.title = "Shortcut: E";
     doneBtn.onclick = () => toggleDone(it); actions.append(doneBtn); sc.append(actions);
     box.append(sc);
