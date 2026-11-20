@@ -45,14 +45,34 @@ const PROMO_SENDER = /(^|[._+-])(newsletters?|marketing|promos?|promotions?|offe
 const PROMO_TEXT = /\bunsubscribe\b|\b\d{1,2}% off\b|\bsale ends\b|\blimited[- ]time offer\b|\bview (this email )?in (your )?browser\b/i;
 const isPromo = (addr, subject, summary) => !/^notifications@monday\.com$/i.test(addr) && (PROMO_SENDER.test(addr) || PROMO_TEXT.test(`${subject} ${summary}`));
 
+// Monday notification emails link to the item ("dl.monday.com/boards/1/pulses/2/posts/3").
+// The list call has no body, so read each one once and remember the link.
+const mondayLinks = new Map();
+const MONDAY_LINK = /href="(https:\/\/[\w.-]*monday\.com\/boards\/\d+\/pulses\/\d+[^"]*)"/i;
+async function mondayLink(acct, m) {
+  const id = String(m.messageId);
+  if (mondayLinks.has(id)) return mondayLinks.get(id);
+  let link = "";
+  try {
+    const c = await call(`/accounts/${acct.id}/folders/${m.folderId}/messages/${id}/content`);
+    link = ((String(c?.data?.content || "").match(MONDAY_LINK) || [])[1] || "").replace(/&amp;/g, "&");
+  } catch { return ""; } // try again next refresh
+  mondayLinks.set(id, link);
+  if (mondayLinks.size > 500) mondayLinks.delete(mondayLinks.keys().next().value);
+  return link;
+}
+
 export async function listMails(acct) {
   const j = await call(`/accounts/${acct.id}/messages/view?limit=40`);
+  const links = {};
+  for (const m of j.data || []) if (m.folderId && /^notifications@monday\.com$/i.test(String(m.fromAddress || ""))) links[m.messageId] = await mondayLink(acct, m);
   return (j.data || []).map((m) => ({
     key: "e:" + m.messageId, source: "email", account: { id: acct.id, email: acct.email }, msgId: String(m.messageId),
     from: ent(m.sender || m.fromAddress), fromAddr: m.fromAddress || "", subject: ent(m.subject) || "(no subject)",
     preview: String(m.summary || "").replace(/\s+/g, " ").trim(), time: Number(m.receivedTime) || 0,
     unread: String(m.status) === "0", important: ["1", "2"].includes(String(m.priority)),
-    promo: isPromo(String(m.fromAddress || ""), ent(m.subject), String(m.summary || ""))
+    promo: isPromo(String(m.fromAddress || ""), ent(m.subject), String(m.summary || "")),
+    mondayLink: links[m.messageId] || ""
   }));
 }
 
