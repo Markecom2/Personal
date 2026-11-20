@@ -14,6 +14,14 @@ import * as monday from "./sources/monday.js";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TZ = process.env.TIMEZONE || "Asia/Kolkata";
 const REFRESH_MIN = Math.max(15, Number(process.env.REFRESH_MINUTES) || 60);
+// How far back to look for emails and Slack messages still waiting on your reply
+const BACKLOG_DAYS = Math.min(90, Math.max(1, Number(process.env.BACKLOG_DAYS) || 30));
+// Recent items plus older ones still waiting on you; one entry per key, flagged when waiting.
+const withWaiting = (recent, older) => {
+  const wait = new Set(older.map((i) => i.key));
+  const out = recent.map((i) => (wait.has(i.key) ? { ...i, waiting: true } : i)), have = new Set(out.map((i) => i.key));
+  return out.concat(older.filter((i) => !have.has(i.key)));
+};
 const [WORK_START, WORK_END] = (process.env.WORK_HOURS || "7-21").split("-").map(Number);
 
 /* ---------------- live data ---------------- */
@@ -45,7 +53,12 @@ async function refresh() {
         live.accounts = accts.value;
         for (const a of accts.value) {
           const r = await settle("Zoho " + a.email, "email", () => zoho.listMails(a));
-          if (r.ok) { live.mail[a.id] = r.value; sources.push({ icon: "email", label: a.email, state: "ok", txt: `${r.value.filter((m) => m.unread).length} unread`, filter: { kind: "email", value: a.email } }); }
+          if (r.ok) {
+            const w = await settle("Zoho waiting " + a.email, "email", () => zoho.waiting(a, BACKLOG_DAYS));
+            const older = w.ok ? w.value : (live.mail[a.id] || []).filter((m) => m.waiting);
+            live.mail[a.id] = withWaiting(r.value, older);
+            sources.push({ icon: "email", label: a.email, state: "ok", txt: `${r.value.filter((m) => m.unread).length} unread · ${older.length} waiting`, filter: { kind: "email", value: a.email } });
+          }
           else sources.push({ icon: "email", label: a.email, state: "err", txt: "problem", note: r.error, filter: { kind: "email", value: a.email } });
         }
       } else sources.push({ icon: "email", label: "Zoho", state: "err", txt: "problem", note: accts.error });
@@ -58,7 +71,12 @@ async function refresh() {
     for (const a of slackAccts) {
       const label = several ? "Slack · " + a.label : "Slack";
       const r = await settle("Slack " + a.label, "slack", () => slack.recentMessages(a, several));
-      if (r.ok) { slackItems.push(...r.value); sources.push({ icon: "slack", label, state: "ok", txt: `${r.value.length} in 24h`, filter: { kind: "slack", value: a.label } }); }
+      if (r.ok) {
+        const w = await settle("Slack waiting " + a.label, "slack", () => slack.waiting(a, several, BACKLOG_DAYS));
+        const older = w.ok ? w.value : live.slack.filter((m) => m.server === a.label && m.waiting);
+        slackItems.push(...withWaiting(r.value, older));
+        sources.push({ icon: "slack", label, state: "ok", txt: `${r.value.length} in 24h · ${older.length} waiting`, filter: { kind: "slack", value: a.label } });
+      }
       else {
         // keep last good data for this account
         slackItems.push(...live.slack.filter((m) => m.server === a.label));

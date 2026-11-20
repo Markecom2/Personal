@@ -62,18 +62,61 @@ async function mondayLink(acct, m) {
   return link;
 }
 
-export async function listMails(acct) {
-  const j = await call(`/accounts/${acct.id}/messages/view?limit=40`);
-  const links = {};
-  for (const m of j.data || []) if (m.folderId && /^notifications@monday\.com$/i.test(String(m.fromAddress || ""))) links[m.messageId] = await mondayLink(acct, m);
-  return (j.data || []).map((m) => ({
+const toItem = (acct, m) => ({
     key: "e:" + m.messageId, source: "email", account: { id: acct.id, email: acct.email }, msgId: String(m.messageId),
     from: ent(m.sender || m.fromAddress), fromAddr: m.fromAddress || "", subject: ent(m.subject) || "(no subject)",
     preview: String(m.summary || "").replace(/\s+/g, " ").trim(), time: Number(m.receivedTime) || 0,
     unread: String(m.status) === "0", important: ["1", "2"].includes(String(m.priority)),
-    promo: isPromo(String(m.fromAddress || ""), ent(m.subject), String(m.summary || "")),
-    mondayLink: links[m.messageId] || ""
-  }));
+    promo: isPromo(String(m.fromAddress || ""), ent(m.subject), String(m.summary || ""))
+});
+
+export async function listMails(acct) {
+  const j = await call(`/accounts/${acct.id}/messages/view?limit=40`);
+  const links = {};
+  for (const m of j.data || []) if (m.folderId && /^notifications@monday\.com$/i.test(String(m.fromAddress || ""))) links[m.messageId] = await mondayLink(acct, m);
+  return (j.data || []).map((m) => ({ ...toItem(acct, m), mondayLink: links[m.messageId] || "" }));
+}
+
+// ---- Still waiting on you ----
+// Emails from the last BACKLOG_DAYS sent straight to you (in To, not Cc) by someone you have emailed, or a colleague
+// on your own domain, with nothing sent by you in that conversation since. Automated and marketing senders are skipped,
+// so newsletters, receipts and notifications never count.
+const AUTO_SENDER = /(^|[._+-])(no-?reply|do-?not-?reply|notifications?|notify|alerts?|mailer(-daemon)?|bounces?|newsletters?|digest|marketing|news|updates?|info|billing|invoices?|receipts?|statements?|hello|support|help|feedback|calendar|postmaster|system|automated)([._+-]|@)/i;
+const addrs = (s) => ent(s).toLowerCase().match(/[\w.+'-]+@[\w.-]+\.[a-z]{2,}/g) || [];
+const topic = (s) => ent(s).toLowerCase().replace(/^(\s*(re|fw|fwd|aw)\s*:\s*)+/i, "").replace(/\s+/g, " ").trim();
+const later = (map, k, t) => { if (k && t > (map.get(k) || 0)) map.set(k, t); };
+
+async function pages(path, cut, timeOf, max = 10) {
+  const out = [];
+  for (let i = 0, start = 1; i < max; i++, start += 200) {
+    const p = (await call(`${path}${path.includes("?") ? "&" : "?"}limit=200&start=${start}&includeto=true`)).data || [];
+    out.push(...p);
+    if (p.length < 200 || Math.min(...p.map(timeOf)) < cut) break;
+  }
+  return out;
+}
+
+export async function waiting(acct, days = 30) {
+  const cut = Date.now() - days * 864e5, me = String(acct.email).toLowerCase(), myDomain = me.split("@")[1];
+  const sentAt = (m) => Number(m.sentDateInGMT) || Number(m.receivedTime) || 0;
+  const inbox = await pages(`/accounts/${acct.id}/messages/view`, cut, (m) => Number(m.receivedTime) || 0);
+  const sent = await pages(`/accounts/${acct.id}/messages/search?searchKey=${encodeURIComponent("in:sent")}`, cut, sentAt);
+  const known = new Set(), byTopic = new Map(), byThread = new Map();
+  for (const m of [...sent, ...inbox.filter((x) => String(x.fromAddress).toLowerCase() === me)]) {
+    for (const a of [...addrs(m.toAddress), ...addrs(m.ccAddress)]) known.add(a);
+    later(byTopic, topic(m.subject), sentAt(m)); later(byThread, m.threadId, sentAt(m));
+  }
+  const latest = new Map(); // one row per conversation: its newest unanswered message
+  for (const m of inbox) {
+    const t = Number(m.receivedTime) || 0, from = String(m.fromAddress || "").toLowerCase();
+    if (t < cut || !from || from === me || !addrs(m.toAddress).includes(me)) continue;
+    if (AUTO_SENDER.test(from) || /monday\.com$/.test(from)) continue;
+    if (!known.has(from) && from.split("@")[1] !== myDomain) continue;
+    if (Math.max(byTopic.get(topic(m.subject)) || 0, byThread.get(m.threadId) || 0) > t) continue; // you replied
+    const k = m.threadId || topic(m.subject) + "|" + from;
+    if (!latest.has(k) || Number(latest.get(k).receivedTime) < t) latest.set(k, m);
+  }
+  return [...latest.values()].map((m) => ({ ...toItem(acct, m), waiting: true }));
 }
 
 export async function reply(item, text) {
