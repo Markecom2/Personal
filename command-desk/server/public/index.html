@@ -448,6 +448,10 @@ details.rule p{margin:8px 0 0}
 .task-meta{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:12px;color:var(--muted);min-width:0}
 .task-from{overflow-wrap:anywhere}
 .tag{display:inline-flex;border-radius:999px;padding:1px 8px;font-weight:600;background:var(--sunk);white-space:nowrap}
+.tag.wait{background:var(--high-soft);color:var(--high)}
+.latest-filter{display:flex;gap:6px;padding:0 16px 10px}
+.latest-filter button{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:3px 10px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+.latest-filter button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
 .tag.top{background:var(--surface);color:var(--accent)}
 .tag.due.late{background:var(--crit-soft);color:var(--crit)}.tag.due.today{background:var(--high-soft);color:var(--high)}.tag.due.soon{background:var(--norm-soft);color:var(--norm)}
 .task-move{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:var(--surface);color:var(--ink);max-width:124px}
@@ -653,6 +657,7 @@ details.rule p{margin:8px 0 0}
         <div class="sort-grid">
           <section class="latest" aria-labelledby="latestH">
             <div class="latest-h"><h3 id="latestH">Unread</h3><span class="latest-n" id="latestN">0</span></div>
+            <div class="latest-filter" id="latestFilter" role="group" aria-label="Show in Unread"></div>
             <p class="latest-sub">New messages and tasks land here, newest first. Put each one in a bucket. A new reply brings it back here.</p>
             <div id="latestList"></div>
           </section>
@@ -680,7 +685,7 @@ details.rule p{margin:8px 0 0}
     mon: { boards: [], tasks: {}, updates: {}, err: {}, ctx: {}, at: 0 },
     triage: null, triageAt: 0, planning: false,
     src: "all", tile: null, q: "", showDone: false, selected: null, collapsed: { fyi: true, later: true }, view: "inbox", plan: null, planT: null, today: "", tomorrow: "", streak: 0, collapsedE: true,
-    conn: null, scope: null, showMuted: false, buckets: {}, latestShow: 25, planTab: "A", openRow: null, example: false, loading: true, sending: false, draftCtl: null, confirmFor: null
+    conn: null, scope: null, showMuted: false, buckets: {}, latestShow: 25, latestWaiting: false, planTab: "A", openRow: null, example: false, loading: true, sending: false, draftCtl: null, confirmFor: null
   };
   const RANK = { critical: 0, high: 1, normal: 2, low: 3, fyi: 4 };
   const LABEL = { critical: "Critical", high: "High", normal: "Normal", low: "Low", fyi: "FYI" };
@@ -724,6 +729,9 @@ details.rule p{margin:8px 0 0}
   const dueInfo = (d) => { if (!d) return null; const t = todayStr();
     return d < t ? { text: `Overdue · ${shortDate(d)}`, short: "overdue", cls: "late" } : d === t ? { text: "Due today", short: "due today", cls: "today" } : d === tomorrowStr() ? { text: "Due tomorrow", short: "due tomorrow", cls: "soon" } : { text: `Due ${shortDate(d)}`, short: "due " + shortDate(d), cls: "" }; };
   const wide = () => window.matchMedia("(min-width: 901px)").matches;
+  // How long an item has waited for your reply ("today", "3 days").
+  const waitAge = (it) => { const d = Math.floor((Date.now() - (it.time || Date.now())) / 864e5); return d < 1 ? "today" : d === 1 ? "1 day" : `${d} days`; };
+  const waitTag = (it) => (it.waiting ? el("span", "tag wait", `No reply · ${waitAge(it)}`) : null);
 
   function errCopy(e, server) {
     switch (e && e.code) {
@@ -846,7 +854,7 @@ details.rule p{margin:8px 0 0}
   }
   // Emails that stay out of the inbox and planner. Nothing is changed in Zoho.
   function isMuted(it, ai, urgency) {
-    if (it.source !== "email") return false;
+    if (it.source !== "email" || it.waiting) return false; // someone is waiting on your reply: never hide it
     if (urgency === "low" || urgency === "fyi") return true;
     return !!(it.promo || (ai && ai.promotional)) && urgency !== "critical" && urgency !== "high";
   }
@@ -1025,7 +1033,7 @@ details.rule p{margin:8px 0 0}
         r.type = "button"; r.setAttribute("role", "option"); r.dataset.key = it.key; r.setAttribute("aria-selected", String(it.key === S.selected));
         const ic = el("span", "ic " + SRC[it.mondayMail ? "monday" : it.source].cls, SRC[it.mondayMail ? "monday" : it.source].letter); ic.setAttribute("aria-hidden", "true");
         const sub = it.mondayMail ? `${it.monAcct} · ${it.from} · via email` : it.source === "email" ? it.from : it.source === "slack" ? `#${it.channel} · ${it.from}` : it.kind === "task" ? [it.client, it.status].filter(Boolean).join(" · ") : `${it.board} · ${it.from}`;
-        const dueNow = dueInfo(it.dueDate), when = dueNow ? dueNow.short : fmtTime(it.time), late = !!dueNow && dueNow.cls === "late";
+        const dueNow = dueInfo(it.dueDate), when = dueNow ? dueNow.short : it.waiting && waitAge(it) !== "today" ? "no reply " + waitAge(it) : fmtTime(it.time), late = (!!dueNow && dueNow.cls === "late") || (!dueNow && it.waiting && waitAge(it) !== "today");
         r.append(ic, el("span", "t", it.title), el("span", "when" + (late ? " late" : ""), when), el("span", "sub", sub));
         r.onclick = () => select(it.key, true);
         list.append(r);
@@ -1066,6 +1074,7 @@ details.rule p{margin:8px 0 0}
     chips.append(el("span", "chip", it.mondayMail ? "Monday notification (email)" : it.source === "email" ? "Email" : it.source === "slack" ? "Slack" : it.kind === "task" ? "Monday task" : "Monday discussion"));
     if (it.client) chips.append(el("span", "chip", it.client));
     if (it.kind === "task" && it.status) chips.append(el("span", "chip", it.status));
+    if (it.waiting && !isDone(it.key)) chips.append(el("span", "chip", `Waiting on your reply · ${waitAge(it)}`));
     if (isDone(it.key)) chips.append(el("span", "chip", "Handled"));
     top.append(chips, el("h2", null, it.title));
     const meta = el("div", "d-meta");
@@ -1327,9 +1336,14 @@ details.rule p{margin:8px 0 0}
 
   // Latest: incoming tasks you haven't sorted yet, newest first, each with one-tap buckets.
   function renderLatest(items) {
-    const list = $("latestList"), rows = items.filter((i) => i.letter === "N").sort((a, b) => b.time - a.time);
+    const all = items.filter((i) => i.letter === "N"), waitingN = all.filter((i) => i.waiting).length;
+    if (!waitingN) S.latestWaiting = false;
+    const rows = (S.latestWaiting ? all.filter((i) => i.waiting) : all).sort((a, b) => b.time - a.time), list = $("latestList");
+    const fb = (label, on, v) => { const b = el("button", null, label); b.type = "button"; b.setAttribute("aria-pressed", String(on)); b.onclick = () => { S.latestWaiting = v; S.latestShow = 25; renderPlanner(); }; return b; };
+    $("latestFilter").hidden = !waitingN;
+    $("latestFilter").replaceChildren(fb(`All ${all.length}`, !S.latestWaiting, false), fb(`Waiting on your reply ${waitingN}`, S.latestWaiting, true));
     const keep = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.sort;
-    $("latestN").textContent = String(rows.length); $("latestN").className = "latest-n" + (rows.length ? "" : " zero");
+    $("latestN").textContent = String(all.length); $("latestN").className = "latest-n" + (all.length ? "" : " zero");
     list.replaceChildren();
     if (!rows.length) { list.append(el("div", "latest-empty", S.loading ? "Loading your tasks…" : "All sorted. New tasks will show up here.")); return; }
     rows.slice(0, S.latestShow).forEach((it) => {
@@ -1339,6 +1353,7 @@ details.rule p{margin:8px 0 0}
       const body = el("div", "task-body"); body.append(el("span", "tt", it.title));
       const meta = el("div", "task-meta");
       const due = dueInfo(it.dueDate); if (due) meta.append(el("span", "tag due " + due.cls, due.text));
+      const wt = waitTag(it); if (wt) meta.append(wt);
       const src = it.mondayMail ? `Monday · ${it.from}` : it.source === "email" ? "Email · " + it.from : it.source === "slack" ? "Slack · " + it.from : it.kind === "task" ? `Monday · ${it.status || "Task"}` : "Monday · " + it.from;
       meta.append(el("span", "task-from", src)); if (it.time) meta.append(el("span", null, fmtTime(it.time)));
       body.append(meta);
@@ -1382,6 +1397,7 @@ details.rule p{margin:8px 0 0}
     const meta = el("div", "task-meta");
     if (isFrog) meta.append(el("span", "tag top", "🐸 Top task"));
     const due = dueInfo(it.dueDate); if (due) meta.append(el("span", "tag due " + due.cls, due.text));
+    const wt = waitTag(it); if (wt) meta.append(wt);
     const from = it.own ? "Your task" + (it.delegateTo ? " · for " + it.delegateTo : "") : [it.letter === "D" && it.delegateTo ? "Hand to " + it.delegateTo : "", it.mondayMail ? `Monday · ${it.from}` : it.source === "email" ? "Email · " + it.from : it.source === "slack" ? "Slack · " + it.from : it.kind === "task" ? `Monday · ${it.status || "Task"}` : "Monday · " + it.from].filter(Boolean).join(" · ");
     meta.append(el("span", "task-from", from)); body.append(meta);
     const sel = el("select", "task-move"); sel.setAttribute("aria-label", `Priority for ${it.title}`); LETTERS.forEach((l) => sel.append(new Option(LETTER_INFO[l][0], l, false, l === it.letter)));
