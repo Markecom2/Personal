@@ -191,7 +191,7 @@ app.post("/api/planner", (req, res) => {
   if (p.order && typeof p.order === "object") out.order = Object.fromEntries(["A", "B", "C", "D", "E"].map((l) => [l, (Array.isArray(p.order[l]) ? p.order[l] : []).slice(0, 200).map((k) => String(k).slice(0, 80))]));
   if (Array.isArray(p.tasks)) out.tasks = p.tasks.slice(0, 100).map((t) => ({
     id: /^p:[\w-]{1,40}$/.test(t.id) ? t.id : "p:" + Math.random().toString(36).slice(2, 10),
-    text: String(t.text || "").slice(0, 300), abc: letter(t.abc) || "B", done: !!t.done, delegateTo: String(t.delegateTo || "").slice(0, 60),
+    text: String(t.text || "").slice(0, 300), abc: letter(t.abc) || "B", done: !!t.done, doneAt: t.done ? Number(t.doneAt) || Date.now() : 0, delegateTo: String(t.delegateTo || "").slice(0, 60),
     due: /^\d{4}-\d{2}-\d{2}$/.test(t.due || "") ? t.due : ""
   })).filter((t) => t.text.trim());
   if ("notes" in p) out.notes = String(p.notes || "").slice(0, 5000);
