@@ -652,8 +652,8 @@ details.rule p{margin:8px 0 0}
         </form>
         <div class="sort-grid">
           <section class="latest" aria-labelledby="latestH">
-            <div class="latest-h"><h3 id="latestH">Latest</h3><span class="latest-n" id="latestN">0</span></div>
-            <p class="latest-sub">New tasks land here, newest first. Put each one in a bucket.</p>
+            <div class="latest-h"><h3 id="latestH">Unread</h3><span class="latest-n" id="latestN">0</span></div>
+            <p class="latest-sub">New messages and tasks land here, newest first. Put each one in a bucket. A new reply brings it back here.</p>
             <div id="latestList"></div>
           </section>
           <div class="buckets">
@@ -1200,6 +1200,16 @@ details.rule p{margin:8px 0 0}
     return all.sort((a, b) => LETTERS.indexOf(a.letter) - LETTERS.indexOf(b.letter) || pos(a) - pos(b) || (a.done - b.done) || (a.dueDate || "9999").localeCompare(b.dueDate || "9999") || b.time - a.time);
   }
 
+  // Finished in the last 7 days: incoming items you marked handled and today's own tasks, newest first.
+  function doneItems() {
+    if (!S.plan) return [];
+    const cut = Date.now() - 7 * 864e5, abc = S.plan.abc || {};
+    const inbox = ITEMS.filter((i) => isDone(i.key) && Number(handled[i.key]) >= cut)
+      .map((i) => ({ ...i, own: false, done: true, doneAt: Number(handled[i.key]), letter: (S.buckets[i.key] && S.buckets[i.key].L) || abc[i.key] || "N" }));
+    const own = (S.plan.tasks || []).filter((t) => t.done).map((t) => ({ key: t.id, own: true, title: t.text, done: true, doneAt: t.doneAt || 0, letter: abc[t.id] || t.abc || "B", source: "own", time: 0 }));
+    return [...inbox, ...own].sort((a, b) => b.doneAt - a.doneAt);
+  }
+
   function frogOf(items) {
     const want = S.plan && S.plan.frog; // your choice only; otherwise the first open Must do
     let f = want && items.find((i) => i.key === want);
@@ -1209,7 +1219,7 @@ details.rule p{margin:8px 0 0}
   }
 
   function markTaskDone(it, done) {
-    if (it.own) planPatch(S.today, { tasks: (S.plan.tasks || []).map((t) => (t.id === it.key ? { ...t, done } : t)) });
+    if (it.own) planPatch(S.today, { tasks: (S.plan.tasks || []).map((t) => (t.id === it.key ? { ...t, done, doneAt: done ? Date.now() : 0 } : t)) });
     else { setDone(it.key, done); render(); }
   }
 
@@ -1286,12 +1296,21 @@ details.rule p{margin:8px 0 0}
     const openIn = (L) => items.filter((i) => i.letter === L && !i.done);
     const aLeft = openIn("A").length;
     $("abcMeta").textContent = aLeft ? `${aLeft} must-do task${aLeft === 1 ? "" : "s"} left` : "No must-dos left";
-    tabs.replaceChildren(...LETTERS.map((L) => { const on = S.planTab === L, b = el("button", "ptab " + L); b.type = "button"; b.id = "planTab-" + L; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(on)); b.setAttribute("aria-controls", "abcGrid"); b.tabIndex = on ? 0 : -1;
-      b.append(el("span", null, LETTER_INFO[L][0]), el("span", "ptab-n", String(openIn(L).length)));
+    const finished = doneItems(), TABS = [...LETTERS, "DONE"];
+    if (!TABS.includes(S.planTab)) S.planTab = "A";
+    tabs.replaceChildren(...TABS.map((L) => { const on = S.planTab === L, b = el("button", "ptab " + L); b.type = "button"; b.id = "planTab-" + L; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(on)); b.setAttribute("aria-controls", "abcGrid"); b.tabIndex = on ? 0 : -1;
+      b.append(el("span", null, L === "DONE" ? "✓ Done" : LETTER_INFO[L][0]), el("span", "ptab-n", String(L === "DONE" ? finished.length : openIn(L).length)));
       b.onclick = () => { S.planTab = L; S.openRow = null; renderPlanner(); $("planTab-" + L).focus(); };
-      b.onkeydown = (e) => { const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (!d) return; e.preventDefault(); S.planTab = LETTERS[(LETTERS.indexOf(L) + d + LETTERS.length) % LETTERS.length]; S.openRow = null; renderPlanner(); $("planTab-" + S.planTab).focus(); };
+      b.onkeydown = (e) => { const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (!d) return; e.preventDefault(); S.planTab = TABS[(TABS.indexOf(L) + d + TABS.length) % TABS.length]; S.openRow = null; renderPlanner(); $("planTab-" + S.planTab).focus(); };
       return b; }));
-    const grid = $("abcGrid"), L = S.planTab, rows = items.filter((i) => i.letter === L); grid.setAttribute("aria-labelledby", "planTab-" + L); grid.replaceChildren();
+    const grid = $("abcGrid"), L = S.planTab; grid.setAttribute("aria-labelledby", "planTab-" + L); grid.replaceChildren();
+    if (L === "DONE") {
+      const h = el("div", "tl-head"); h.append(el("p", null, "Finished in the last 7 days. Untick one to put it back.")); grid.append(h);
+      if (!finished.length) grid.append(el("div", "empty-grp", "Nothing finished yet. Tick a task when it's done and it moves here."));
+      finished.slice(0, 80).forEach((it) => grid.append(doneRow(it)));
+      renderLatest(items); renderTomorrow(items); return;
+    }
+    const rows = items.filter((i) => i.letter === L && !i.done);
     const head = el("div", "tl-head"); head.append(el("p", null, LETTER_INFO[L][1]));
     if (L === "E" && rows.some((r) => !r.done)) { const clr = el("button", "btn", "Drop all"); clr.type = "button"; clr.title = "Mark every item here as handled";
       clr.onclick = () => { const inboxKeys = rows.filter((r) => !r.own).map((r) => r.key), ownE = new Set(rows.filter((r) => r.own).map((r) => r.key)); inboxKeys.forEach((k) => setDone(k, true));
@@ -1343,7 +1362,7 @@ details.rule p{margin:8px 0 0}
     fill.style.width = pct + "%"; bar.setAttribute("role", "progressbar"); bar.setAttribute("aria-valuenow", String(pct)); bar.setAttribute("aria-valuemin", "0"); bar.setAttribute("aria-valuemax", "100"); bar.setAttribute("aria-label", "Today's progress"); bar.append(fill); prog.append(top, bar);
     const stat = (n, l) => { const s = el("div", "sum-stat"); s.append(el("b", null, n), el("span", null, l)); return s; };
     const unsorted = items.filter((i) => i.letter === "N").length;
-    $("plSummary").replaceChildren(prog, stat(String(unsorted), "to sort"), stat(`${mins} min`, "focused today"), stat(`${S.streak} day${S.streak === 1 ? "" : "s"}`, "top-task streak"));
+    $("plSummary").replaceChildren(prog, stat(String(unsorted), "unread"), stat(`${mins} min`, "focused today"), stat(`${S.streak} day${S.streak === 1 ? "" : "s"}`, "top-task streak"));
   }
 
   // Opens where the task came from: Monday or Slack in a new tab, email in the Inbox here. Your own tasks have no source.
@@ -1365,8 +1384,8 @@ details.rule p{margin:8px 0 0}
     const from = it.own ? "Your task" + (it.delegateTo ? " · for " + it.delegateTo : "") : [it.letter === "D" && it.delegateTo ? "Hand to " + it.delegateTo : "", it.mondayMail ? `Monday · ${it.from}` : it.source === "email" ? "Email · " + it.from : it.source === "slack" ? "Slack · " + it.from : it.kind === "task" ? `Monday · ${it.status || "Task"}` : "Monday · " + it.from].filter(Boolean).join(" · ");
     meta.append(el("span", "task-from", from)); body.append(meta);
     const sel = el("select", "task-move"); sel.setAttribute("aria-label", `Priority for ${it.title}`); LETTERS.forEach((l) => sel.append(new Option(LETTER_INFO[l][0], l, false, l === it.letter)));
-    if (!it.own) sel.append(new Option("Back to Latest", "N"));
-    sel.onchange = () => { const name = sel.value === "N" ? "Latest" : LETTER_INFO[sel.value][0], was = it.letter; setLetter(it, sel.value); toast(`Moved to ${name}`, () => setLetter(it, was)); };
+    if (!it.own) sel.append(new Option("Back to Unread", "N"));
+    sel.onchange = () => { const name = sel.value === "N" ? "Unread" : LETTER_INFO[sel.value][0], was = it.letter; setLetter(it, sel.value); toast(`Moved to ${name}`, () => setLetter(it, was)); };
     const more = el("button", "task-more", "⋯"); more.type = "button"; more.dataset.more = it.key; more.setAttribute("aria-label", `More actions for ${it.title}`); more.setAttribute("aria-expanded", String(open));
     more.onclick = () => { S.openRow = open ? null : it.key; renderPlanner(); const b = [...document.querySelectorAll(".task-more")].find((x) => x.dataset.more === it.key); b && b.focus(); };
     const ctl = el("div", "task-ctl"), opener = openTaskControl(it); if (opener) ctl.append(opener); ctl.append(sel);
@@ -1377,6 +1396,23 @@ details.rule p{margin:8px 0 0}
       if (!it.own && it.letter === "D") act("Hand off", () => openInInbox(it.key));
       else act("Delete task", () => { const kept = S.plan.tasks; planPatch(S.today, { tasks: kept.filter((t) => t.id !== it.key) }); toast("Task deleted", () => planPatch(S.today, { tasks: kept })); });
       r.append(p); }
+    return r;
+  }
+
+  function doneRow(it) {
+    const r = el("div", "task is-done");
+    const check = el("input", "task-check"); check.type = "checkbox"; check.checked = true; check.setAttribute("aria-label", `Not done yet: ${it.title}`);
+    const back = it.letter === "N" ? "Unread" : LETTER_INFO[it.letter] ? LETTER_INFO[it.letter][0] : "your list";
+    check.onchange = () => { markTaskDone(it, false); toast(`Moved back to ${back}`, () => markTaskDone(it, true)); };
+    const body = el("div", "task-body"); body.append(el("span", "tt done", it.title));
+    const meta = el("div", "task-meta");
+    const src = it.own ? "Your task" : it.mondayMail ? `Monday · ${it.from}` : it.source === "email" ? "Email · " + it.from : it.source === "slack" ? "Slack · " + it.from : it.kind === "task" ? `Monday · ${it.status || "Task"}` : "Monday · " + it.from;
+    meta.append(el("span", "task-from", src));
+    if (it.doneAt) { const d = new Date(it.doneAt), today = new Date().toDateString() === d.toDateString();
+      meta.append(el("span", null, "Done " + (today ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })))); }
+    body.append(meta);
+    const ctl = el("div", "task-ctl"), opener = openTaskControl(it); if (opener) ctl.append(opener);
+    r.append(check, body, ctl);
     return r;
   }
 

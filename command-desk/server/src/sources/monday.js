@@ -70,7 +70,12 @@ function toTask(acct, board, it) {
   };
 }
 
-function toUpdate(acct, board, u) {
+// Newest post in an update thread that someone other than you wrote (0 if none).
+const lastFromOthers = (u, myName) => Math.max(0, ...[u, ...(Array.isArray(u.replies) ? u.replies : [])]
+  .filter((e) => !myName || String(e.creator?.name || "").trim().toLowerCase() !== myName)
+  .map((e) => Date.parse(e.created_at) || 0));
+
+function toUpdate(acct, board, u, myName) {
   const reps = Array.isArray(u.replies) ? u.replies : [];
   const last = reps.length ? reps[reps.length - 1] : u;
   const thread = [`${u.creator?.name || "Someone"}: ${strip(u.text_body)}`].concat(reps.map((r) => `${r.creator?.name || "Someone"}: ${strip(r.text_body)}`));
@@ -80,7 +85,7 @@ function toUpdate(acct, board, u) {
     link: u.item_id && board.url ? `${board.url}/pulses/${u.item_id}` : board.url || "",
     from: last.creator?.name || "", starter: u.creator?.name || "",
     subject: (strip(last.text_body).split("\n").find((l) => l.trim()) || "(update)").slice(0, 140),
-    preview: thread.join("\n\n").slice(0, 3000), time: Date.parse(last.created_at || u.updated_at || u.created_at) || 0, unread: false, replies: reps.length,
+    preview: thread.join("\n\n").slice(0, 3000), time: Date.parse(last.created_at || u.updated_at || u.created_at) || 0, unread: false, replies: reps.length, activity: lastFromOthers(u, myName),
     client: acct.label === "VenueScale" ? "" : acct.label
   };
 }
@@ -99,20 +104,24 @@ export async function readAccount(acct, primary) {
   const tasks = [], updates = [];
   // Everyone assigned to a task (plus the token's owner) counts as the team; anyone else posting is the client.
   const team = new Set();
-  try { const { me } = await gql(acct, `{ me { name } }`); if (me?.name) team.add(me.name.toLowerCase()); } catch {}
+  let myName = "";
+  try { const { me } = await gql(acct, `{ me { name } }`); myName = String(me?.name || "").trim().toLowerCase(); if (myName) team.add(myName); } catch {}
   for (const b of boards) for (const it of b.items_page?.items || []) for (const c of it.column_values || [])
     if (/people|person/.test(c.type) && c.text) for (const n of c.text.split(",")) if (n.trim()) team.add(n.trim().toLowerCase());
   const isClient = (name) => !!name && !team.has(String(name).trim().toLowerCase());
   for (const b of boards) {
     const items = b.items_page?.items || [], assigned = new Set(items.map((it) => String(it.id)));
     // Items with a recent post from the client, newest entry of each thread
-    const clientReplied = new Set();
+    const clientReplied = new Set(), lastPost = new Map();
     for (const u of b.updates || []) {
+      const id = String(u.item_id), t = lastFromOthers(u, myName);
+      if (t > (lastPost.get(id) || 0)) lastPost.set(id, t);
       const entries = [u, ...(Array.isArray(u.replies) ? u.replies : [])];
       if (entries.some((e) => isClient(e.creator?.name) && (Date.parse(e.created_at) || 0) >= cutoff)) clientReplied.add(String(u.item_id));
     }
     for (const it of items) {
       const t = toTask(acct, b, it);
+      t.activity = lastPost.get(String(it.id)) || 0;
       if (/^done$/i.test(t.status) || /complete/i.test(t.group)) continue;
       // Submitted for review = finished on our side. Only show it again when the client has replied.
       if (/review/i.test(t.status) || /review/i.test(t.group)) {
@@ -123,7 +132,7 @@ export async function readAccount(acct, primary) {
     }
     for (const u of b.updates || []) {
       if (acct.onlyMine && !assigned.has(String(u.item_id))) continue;
-      const x = toUpdate(acct, b, u); if (x.time >= cutoff) updates.push(x);
+      const x = toUpdate(acct, b, u, myName); if (x.time >= cutoff) updates.push(x);
     }
   }
   return { boards: boards.map((b) => ({ id: b.id, name: b.name })), tasks, updates };
