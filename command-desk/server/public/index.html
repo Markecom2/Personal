@@ -1,838 +1,240 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="en">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Mark's Command Desk</title>
+<title>Command Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cabin:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: sidebar (views, connections) | main column: greeting → priority bar (filters) → day plan → split pane: grouped inbox list | detail. Under 1180px the sidebar becomes a top bar; on phones the views move to bottom tabs and tapping an item opens its detail full-screen. */
 :root{
-  --bg:#f4f6f8; --surface:#ffffff; --raised:#fbfcfd; --sunk:#eceff3; --line:#dde2e8; --line-strong:#c5ccd6;
-  --ink:#121620; --muted:#5d6676; --faint:#8a93a3;
-  --accent:#0f766e; --accent-soft:#e1f2ef; --accent-ink:#ffffff;
-  --crit:#c8302c; --crit-soft:#fdeceb; --high:#b45d00; --high-soft:#fdf0dc; --norm:#2f5bd3; --norm-soft:#e8eefc; --low:#6b7486; --low-soft:#eef0f3; --ok:#1a7f4b;
-  --mail:#d14b2f; --slack:#6c3fc4; --monday:#e2445c;
-  --shadow:0 1px 2px rgba(16,22,32,.05),0 4px 16px rgba(16,22,32,.06);
-  --display:"Cabin",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
-  --body:"Cabin",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
-  --mono:"Cabin",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --bg:#f5f4f0;--s:#ffffff;--s2:#faf9f6;--ink:#1c1f24;--m:#6a707b;--faint:#9aa0a9;--line:#e6e3dc;
+  --a:#0f766e;--a2:#e6f2f0;--warn:#b45309;--warn2:#fdf1e2;--bad:#c0392b;--bad2:#fbe9e7;--star:#d99a06;
+  --email:#2563eb;--slack:#7c3aed;--monday:#e11d48;
+  --r:14px;--shadow:0 1px 2px rgba(20,20,20,.04),0 6px 20px rgba(20,20,20,.05);color-scheme:light
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0d1016; --surface:#151922; --raised:#1a1f2a; --sunk:#202633; --line:#2a3140; --line-strong:#3a4356;
-  --ink:#e9edf4; --muted:#9ba4b6; --faint:#6f788b;
-  --accent:#3cc7b5; --accent-soft:#12322f; --accent-ink:#06201d;
-  --crit:#ff7a72; --crit-soft:#3a1b1c; --high:#f5b25a; --high-soft:#352712; --norm:#89a5ff; --norm-soft:#1b2546; --low:#9aa3b5; --low-soft:#232937; --ok:#5fd09a;
-  --mail:#ff8a6b; --slack:#b394ff; --monday:#ff7b8f; --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25); color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#0d1016; --surface:#151922; --raised:#1a1f2a; --sunk:#202633; --line:#2a3140; --line-strong:#3a4356;
-  --ink:#e9edf4; --muted:#9ba4b6; --faint:#6f788b;
-  --accent:#3cc7b5; --accent-soft:#12322f; --accent-ink:#06201d;
-  --crit:#ff7a72; --crit-soft:#3a1b1c; --high:#f5b25a; --high-soft:#352712; --norm:#89a5ff; --norm-soft:#1b2546; --low:#9aa3b5; --low-soft:#232937; --ok:#5fd09a;
-  --mail:#ff8a6b; --slack:#b394ff; --monday:#ff7b8f; --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25); color-scheme:dark}
+  --bg:#121417;--s:#1b1e23;--s2:#171a1e;--ink:#eceef1;--m:#9aa1ad;--faint:#6f7682;--line:#2c3038;
+  --a:#3cc0ae;--a2:#173230;--warn:#f0a44b;--warn2:#3a2a14;--bad:#ff7d73;--bad2:#3b1d1a;--star:#f2c14e;
+  --email:#7aa7ff;--slack:#b394ff;--monday:#ff7a96;--shadow:none;color-scheme:dark}}
 *{box-sizing:border-box}
-body{margin:0}
-:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
-.wrap{max-width:1320px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px;display:grid;gap:18px}
-button{font:inherit;cursor:pointer;color:var(--ink)}
-input,select,textarea,option{font-family:var(--body)}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 14px;font-weight:600;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
-.btn:hover{border-color:var(--line-strong)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.btn.primary:hover{filter:brightness(1.06)}
-.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
-.btn.ghost:hover{background:var(--sunk);color:var(--ink)}
-.btn:disabled{opacity:.5;cursor:default}
-.btn svg{width:16px;height:16px;flex:none}
-.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
-[hidden]{display:none!important}
-.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 "Cabin",system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px 96px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
 /* header */
-.head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 24px}
-.hello{flex:1 1 380px;min-width:0}
-.hello .date{font-size:13px;color:var(--muted);font-weight:500}
-.hello h1{font-family:var(--display);font-size:clamp(24px,3.2vw,34px);line-height:1.15;margin:2px 0 4px;letter-spacing:-.02em;font-weight:700;text-wrap:balance}
-.hello p{margin:0;color:var(--muted);max-width:68ch;text-wrap:pretty}
-.head-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.sync{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);padding-right:4px}
-.pulse{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
-.pulse.busy{background:var(--high)}
-@media (prefers-reduced-motion:no-preference){.pulse.busy{animation:blink 1s ease-in-out infinite}@keyframes blink{50%{opacity:.3}}}
+header.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:22px 0 14px}
+.hello h1{margin:0;font-size:26px;letter-spacing:-.015em;line-height:1.2}
+.hello p{margin:2px 0 0;color:var(--m);font-size:15px}
+.tools{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.iconbtn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border:1px solid var(--line);background:var(--s);border-radius:999px;color:var(--m);font-size:14px}
+.iconbtn:hover{color:var(--ink)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--a)}
+.dot.warn{background:var(--warn)}
+.spin{animation:spin 1s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.headline{margin:0 0 14px;padding:10px 14px;border-radius:12px;background:var(--a2);color:var(--ink);font-size:14.5px}
+.headline b{color:var(--a)}
 
-/* sources */
-.sources{display:flex;flex-wrap:wrap;gap:8px}
-.src{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px 5px 6px;font-size:12px;font-weight:600;max-width:100%}
-.src .ic{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700;flex:none}
-.src .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
-.src .dot.warn{background:var(--high)} .src .dot.err{background:var(--crit)}
-.src .txt{color:var(--muted);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.src-notes{font-size:12px;color:var(--muted);display:grid;gap:4px;margin:0;padding:0;list-style:none}
-.src-notes li::before{content:"• ";color:var(--high)}
-.ic.mail{background:var(--mail)} .ic.slack{background:var(--slack)} .ic.monday{background:var(--monday)}
+/* tabs */
+nav.tabs{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0 10px;display:flex;gap:4px}
+nav.tabs button{flex:1;border:0;background:transparent;padding:9px 6px;border-radius:10px;color:var(--m);font-weight:600;font-size:15px;display:flex;justify-content:center;align-items:center;gap:6px}
+nav.tabs button[aria-selected="true"]{background:var(--s);color:var(--ink);box-shadow:var(--shadow);border:1px solid var(--line)}
+.count{font-size:12px;font-weight:700;min-width:20px;padding:1px 6px;border-radius:999px;background:var(--line);color:var(--m)}
+nav.tabs button[aria-selected="true"] .count{background:var(--a);color:#fff}
 
-/* focus tiles */
-.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.tile{all:unset;box-sizing:border-box;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;gap:4px;grid-template-columns:1fr auto;align-items:end}
-.tile:hover{border-color:var(--line-strong)}
-.tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.tile[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
-.tile .l{grid-column:1/-1;font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:7px}
-.tile .l i{width:8px;height:8px;border-radius:50%;display:inline-block}
-.tile .n{font-family:var(--display);font-size:32px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-.tile .s{font-size:12px;color:var(--faint);text-align:right}
-.tile.crit .n{color:var(--crit)} .tile.crit .l i{background:var(--crit)}
-.tile.high .n{color:var(--high)} .tile.high .l i{background:var(--high)}
-.tile.reply .l i{background:var(--norm)} .tile.mon .l i{background:var(--monday)}
-@media (max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.tile .n{font-size:26px}}
+/* add bar */
+form.add{display:flex;gap:8px;background:var(--s);border:1px solid var(--line);border-radius:var(--r);padding:6px 6px 6px 14px;box-shadow:var(--shadow);margin-bottom:18px}
+form.add input{flex:1;min-width:0;border:0;background:transparent;padding:8px 0;font-size:16px}
+form.add input:focus{outline:none}
+form.add:focus-within{border-color:var(--a)}
+form.add select{border:1px solid var(--line);background:var(--s2);border-radius:10px;padding:0 8px;color:var(--m);font-size:14px}
+.btn{border:1px solid var(--line);background:var(--s);border-radius:10px;padding:8px 14px;font-weight:600;font-size:14px;color:var(--ink);display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--faint)}
+.btn.primary{background:var(--a);border-color:var(--a);color:#fff}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--m)}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.55;cursor:default}
 
-/* day plan */
-.plan-strip{display:grid;gap:8px}
-.strip-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-.strip-h h2{margin:0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
-.strip-h span{font-size:12px;color:var(--faint)}
-.blocks{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scroll-snap-type:x proximity}
-.block{flex:0 0 min(260px,78vw);scroll-snap-align:start;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:3px;align-content:start}
-.block.now{border-color:var(--accent);background:var(--accent-soft)}
-.block .slot{font-family:var(--mono);font-size:12px;color:var(--muted)}
-.block .what{font-weight:650;line-height:1.35}
-.block .refs{font-size:12px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* sections & lists */
+section.block{margin:0 0 22px}
+.sechead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 2px 8px}
+.sechead h2{margin:0;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--m)}
+.sechead .hint{font-size:13px;color:var(--faint)}
+.sechead a,.linkbtn{font-size:14px;color:var(--a);background:none;border:0;padding:0;font-weight:600}
+ul.list{list-style:none;margin:0;padding:0;background:var(--s);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+ul.list>li{display:flex;align-items:center;gap:10px;padding:11px 12px;border-top:1px solid var(--line);min-height:56px}
+ul.list>li:first-child{border-top:0}
+.progress{display:flex;align-items:center;gap:10px;margin:0 2px 18px;color:var(--m);font-size:14px}
+.bar{flex:1;height:6px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--a);border-radius:99px;transition:width .3s}
 
-/* split pane */
-.split{display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);min-height:640px;overflow:hidden}
-.listpane{border-right:1px solid var(--line);display:flex;flex-direction:column;min-width:0;max-height:min(1100px,calc(100vh - 80px))}
-.tools{padding:12px;display:grid;gap:10px;border-bottom:1px solid var(--line);background:var(--raised)}
-.search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:0 10px}
-.search svg{width:16px;height:16px;color:var(--faint);flex:none}
-.search input{border:0;background:transparent;font:inherit;color:var(--ink);padding:8px 0;width:100%;min-width:0;outline:none}
-.search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.seg{display:flex;background:var(--sunk);border-radius:9px;padding:3px;gap:2px}
-.seg button{flex:1;border:0;background:transparent;border-radius:7px;padding:5px 6px;font-size:12px;font-weight:600;color:var(--muted)}
-.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.listscroll{overflow-y:auto;flex:1}
-.group-h{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--raised);border:0;border-bottom:1px solid var(--line);font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;width:100%;text-align:left}
-.group-h .cnt{font-family:var(--mono);font-weight:500;letter-spacing:0;color:var(--faint)}
-.group-h .chev{margin-left:auto;transition:transform .15s}
-.group-h[aria-expanded="false"] .chev{transform:rotate(-90deg)}
-.row{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:2px 10px;padding:11px 14px;border-bottom:1px solid var(--line);width:100%;position:relative}
-.row:hover{background:var(--raised)}
-.row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.row[aria-selected="true"]{background:var(--accent-soft)}
-.row[aria-selected="true"]::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
-.row .ic{grid-row:span 2;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px}
-.row .t{font-weight:600;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
-.row.unread .t::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--norm);margin-left:6px;vertical-align:middle}
-.row .when{font-size:12px;color:var(--faint);font-family:var(--mono);white-space:nowrap}
-.row .when.late{color:var(--crit);font-weight:500}
-.row .sub{grid-column:2/-1;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.row.done{opacity:.55}.row.done .t{text-decoration:line-through}
-.sevbar{display:inline-block;width:8px;height:8px;border-radius:50%}
-.sevbar.critical{background:var(--crit)}.sevbar.high{background:var(--high)}
-.list-empty{padding:40px 20px;text-align:center;color:var(--muted)}
-.list-empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
-.list-foot{padding:10px 14px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);background:var(--raised)}
-.list-foot label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.check{flex-shrink:0;width:24px;height:24px;border-radius:50%;border:2px solid var(--faint);background:transparent;display:grid;place-items:center;padding:0;color:transparent}
+.check:hover{border-color:var(--a);color:var(--a)}
+.check.on{background:var(--a);border-color:var(--a);color:#fff}
+.check svg{width:14px;height:14px}
+.body{flex:1;min-width:0;cursor:pointer;background:none;border:0;padding:0;text-align:left}
+.t{font-size:16px;overflow-wrap:anywhere}
+.done .t{color:var(--faint);text-decoration:line-through}
+.meta{display:flex;flex-wrap:wrap;gap:4px 8px;margin-top:3px;font-size:13px;color:var(--m);align-items:center}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;background:var(--s2);border:1px solid var(--line);color:var(--m)}
+.tag.warn{background:var(--warn2);border-color:transparent;color:var(--warn)}
+.tag.bad{background:var(--bad2);border-color:transparent;color:var(--bad)}
+.tag.ok{background:var(--a2);border-color:transparent;color:var(--a)}
+.src{width:28px;height:28px;flex-shrink:0;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff}
+.src.email{background:var(--email)}.src.slack{background:var(--slack)}.src.monday{background:var(--monday)}.src.task{background:var(--a)}
+.star{flex-shrink:0;width:34px;height:34px;border:0;background:transparent;border-radius:8px;color:var(--faint);font-size:19px;line-height:1;padding:0}
+.star[aria-pressed="true"]{color:var(--star)}
+.star:hover{background:var(--s2)}
+.rowact{display:flex;gap:6px;flex-shrink:0}
+.rowact .btn{padding:6px 10px;font-size:13px}
+.empty{padding:22px 18px;text-align:center;color:var(--m);font-size:15px;background:var(--s);border:1px dashed var(--line);border-radius:var(--r)}
+details.more{margin-top:10px}
+details.more summary{cursor:pointer;color:var(--m);font-size:14px;font-weight:600;padding:6px 2px;list-style:none}
+details.more summary::-webkit-details-marker{display:none}
+details.more summary::before{content:"▸ ";}
+details.more[open] summary::before{content:"▾ ";}
+details.more ul{margin-top:6px}
 
-/* detail */
-.detail{min-width:0;display:flex;flex-direction:column;max-height:min(1100px,calc(100vh - 80px))}
-.detail-scroll{overflow-y:auto;flex:1;padding:22px 26px;display:grid;gap:20px;align-content:start}
-.back{display:none;justify-self:start}
-.d-top{display:grid;gap:10px}
-.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.chip.critical{background:var(--crit-soft);color:var(--crit)}.chip.high{background:var(--high-soft);color:var(--high)}.chip.normal{background:var(--norm-soft);color:var(--norm)}
-.d-top h2{margin:0;font-family:var(--display);font-size:clamp(20px,2.2vw,26px);line-height:1.2;letter-spacing:-.015em;text-wrap:balance;overflow-wrap:anywhere}
-.d-meta{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px;overflow-wrap:anywhere}
-.d-meta a{color:var(--accent);font-weight:600;text-decoration:none}
-.d-meta a:hover{text-decoration:underline}
-.why{background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow-wrap:anywhere}
-.why b{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
-.sec-title{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 8px;display:flex;justify-content:space-between;gap:8px}
-.sec-title span{text-transform:none;letter-spacing:0;font-weight:500;color:var(--faint)}
-.steps{list-style:none;margin:0;padding:0;display:grid;gap:6px}
-.steps label{display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px;align-items:start;padding:9px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--surface)}
-.steps label:hover{border-color:var(--line-strong)}
-.steps input{margin:2px 0 0;width:16px;height:16px;accent-color:var(--accent)}
-.steps input:checked + span{text-decoration:line-through;color:var(--faint)}
-.no-plan{font-size:13px;color:var(--muted);border:1px dashed var(--line);border-radius:10px;padding:12px}
-details.orig{border:1px solid var(--line);border-radius:12px;background:var(--surface)}
-details.orig summary{cursor:pointer;padding:10px 14px;font-size:13px;font-weight:600;color:var(--muted);list-style:none;display:flex;justify-content:space-between}
-details.orig summary::-webkit-details-marker{display:none}
-details.orig summary::after{content:"Show";color:var(--accent)}
-details.orig[open] summary::after{content:"Hide"}
-details.orig .body{padding:0 14px 14px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;max-height:360px;overflow-y:auto}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin:0 0 12px;scrollbar-width:none}
+.chips button{flex-shrink:0;border:1px solid var(--line);background:var(--s);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:600;color:var(--m)}
+.chips button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.search{width:100%;border:1px solid var(--line);background:var(--s);border-radius:12px;padding:10px 14px;margin:0 0 12px;font-size:15px}
 
-/* composer */
-.composer{border-top:1px solid var(--line);background:var(--raised);padding:14px 26px calc(14px + env(safe-area-inset-bottom,0px));display:grid;gap:10px}
-.composer .to{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.composer .to b{color:var(--ink);font-weight:600}
-.ask{display:flex;gap:8px}
-.ask input{flex:1;min-width:0;font:inherit;border:1px solid var(--line);border-radius:9px;padding:8px 12px;background:var(--surface);color:var(--ink)}
-.ask input:focus,.composer textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.composer textarea{font:inherit;border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:110px;resize:vertical;background:var(--surface);color:var(--ink);width:100%}
-.send-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.send-row .status{flex:1;min-width:160px;font-size:13px;color:var(--muted)}
-.status.err{color:var(--crit)}.status.ok{color:var(--ok)}
-.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:1px solid var(--accent);background:var(--accent-soft);border-radius:10px;padding:10px 12px}
-.confirm span{flex:1 1 220px;font-size:13px;font-weight:600}
-.kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;color:var(--muted);background:var(--surface)}
-.d-empty{display:grid;place-items:center;text-align:center;color:var(--muted);padding:60px 20px;height:100%}
-.d-empty b{display:block;color:var(--ink);font-family:var(--display);font-size:20px;margin-bottom:6px}
-.hint{font-size:12px;color:var(--faint);display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(10,12,15,.45);z-index:20;display:none}
+.scrim.open{display:block}
+.sheet{position:fixed;z-index:21;left:50%;top:50%;transform:translate(-50%,-50%);width:min(580px,calc(100vw - 32px));max-height:min(86vh,760px);overflow:auto;background:var(--s);border-radius:18px;padding:20px;display:none;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.sheet.open{display:block}
+@media (max-width:600px){.sheet{left:0;right:0;bottom:0;top:auto;transform:none;width:100%;max-height:90vh;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}}
+.sheet h3{margin:0 40px 4px 0;font-size:19px;line-height:1.3;overflow-wrap:anywhere}
+.sheet .close{position:absolute;right:12px;top:12px;width:36px;height:36px;border:0;border-radius:10px;background:var(--s2);font-size:20px;color:var(--m)}
+.sheet .sub{color:var(--m);font-size:14px;margin:0 0 14px}
+.sheet label{display:block;font-size:13px;font-weight:600;color:var(--m);margin:14px 0 6px}
+.sheet textarea,.sheet input[type=text],.sheet input[type=date]{width:100%;border:1px solid var(--line);background:var(--s2);border-radius:10px;padding:10px 12px;font-size:15px}
+.sheet textarea{min-height:90px;resize:vertical}
+.msg{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--s2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:15px;max-height:300px;overflow:auto}
+.why{font-size:14px;color:var(--ink);background:var(--a2);border-radius:10px;padding:10px 12px;margin:0 0 12px}
+.why ol{margin:6px 0 0;padding-left:20px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1px solid var(--line);background:var(--s);border-radius:10px;padding:8px 12px;font-size:14px;font-weight:600;color:var(--m)}
+.seg button[aria-pressed="true"]{border-color:var(--a);background:var(--a2);color:var(--a)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.actions .spacer{flex:1}
+.srcrow{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.srcrow:first-of-type{border-top:0}
+.srcrow span:last-child{color:var(--m);text-align:right}
+.srcrow.err span:last-child{color:var(--bad)}
 
-/* view switch */
-.views{display:flex;gap:4px;background:var(--sunk);border-radius:12px;padding:4px;width:max-content;max-width:100%}
-.views button{border:0;background:transparent;border-radius:9px;padding:8px 16px;font-weight:600;color:var(--muted);display:inline-flex;gap:8px;align-items:center}
-.views button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.views .pill{font-size:11px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:1px 8px}
-.views .pill.done{background:var(--ok)}
-#inboxView{display:grid;gap:18px}
-
-/* planner */
-.planner{display:grid;gap:22px}
-.pl-top{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:16px;align-items:start}
-.frog{background:var(--accent-soft);border:1px solid var(--accent);border-radius:18px;padding:22px 24px;display:grid;gap:12px;min-width:0}
-.frog .eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
-.frog h2{margin:0;font-family:var(--display);font-size:clamp(22px,2.8vw,30px);line-height:1.15;letter-spacing:-.02em;text-wrap:balance;overflow-wrap:anywhere}
-.frog .fwhy{margin:0;color:var(--muted);max-width:65ch}
-.frog .first{background:var(--surface);border-radius:12px;padding:12px 14px;border:1px solid var(--line)}
-.frog .first b{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
-.frog .acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.frog select{font:inherit;border:1px solid var(--line);border-radius:9px;padding:7px 10px;background:var(--surface);color:var(--ink);max-width:100%}
-.frog.eaten{background:var(--surface);border-color:var(--ok)}
-.frog.eaten .eyebrow{color:var(--ok)}
-.pl-side{display:grid;gap:12px;min-width:0}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;gap:6px}
-.card .k{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.streak .n{font-family:var(--display);font-size:30px;font-weight:700;line-height:1}
-.rule q{font-family:var(--display);font-size:17px;font-weight:600;quotes:none;line-height:1.3}
-.rule p{margin:0;color:var(--muted);font-size:13px}
-.timer .clock{font-family:var(--mono);font-size:34px;font-weight:500;letter-spacing:-.02em}
-.timer .what{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.timer .row2{display:flex;flex-wrap:wrap;gap:6px}
-.timer .row2 button{padding:6px 10px}
-.abc-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
-.abc-h h2{margin:0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
-.abc-h span{font-size:12px;color:var(--faint)}
-.add{display:flex;gap:8px;flex-wrap:wrap}
-.add input{flex:1 1 240px;min-width:0;font:inherit;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:var(--surface);color:var(--ink)}
-.add select{font:inherit;border:1px solid var(--line);border-radius:10px;padding:9px;background:var(--surface);color:var(--ink)}
-.add input:focus,.add select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.abc-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:start}
-.abc-col{display:grid;gap:16px;min-width:0}
-.grp{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-.grp-h{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--raised)}
-.grp-h .L{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-weight:800;font-family:var(--display);color:#fff;flex:none}
-.grp-h .t{font-weight:700}
-.grp-h .s{font-size:12px;color:var(--muted);flex:1;min-width:0}
-.grp-h .btn{padding:4px 10px;font-size:12px}
-.L.A{background:var(--crit)}.L.B{background:var(--high)}.L.C{background:var(--norm)}.L.D{background:var(--slack)}.L.E{background:var(--low)}
-.task{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:2px 10px;padding:10px 14px;border-bottom:1px solid var(--line);align-items:center}
-.task:last-child{border-bottom:0}
-.task .rank{font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500}
-.task .tt{font-weight:600;line-height:1.35;overflow-wrap:anywhere;min-width:0}
-.task .tt.done{text-decoration:line-through;color:var(--faint)}
-.task .meta{grid-column:2/3;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.task .ctl{grid-row:1/3;grid-column:3;display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-.task .ctl button,.task .ctl select{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:7px;padding:4px 7px;cursor:pointer}
-.task .ctl button:hover{border-color:var(--line-strong)}
-.task.isfrog{background:var(--accent-soft)}
-.empty-grp{padding:14px;font-size:13px;color:var(--faint)}
-.tmrw{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
-.tmrw textarea{font:inherit;border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:120px;resize:vertical;background:var(--surface);color:var(--ink);width:100%}
-.tmrw ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
-.tmrw li{display:flex;gap:8px;align-items:center;font-size:13px}
-.tmrw li span{flex:1;min-width:0;overflow-wrap:anywhere}
-@media (max-width:900px){.pl-top,.abc-grid,.tmrw{grid-template-columns:minmax(0,1fr)}.task{grid-template-columns:30px minmax(0,1fr)}.task .ctl{grid-row:auto;grid-column:2/3;justify-content:flex-start}}
-.banner{border:1px solid var(--line);background:var(--high-soft);border-radius:12px;padding:10px 14px;font-size:13px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(22px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600;z-index:30;box-shadow:var(--shadow);max-width:calc(100vw - 32px)}
-
-@media (max-width:900px){
-  .split{grid-template-columns:minmax(0,1fr);min-height:0}
-  .listpane{border-right:0;max-height:none}
-  .detail{display:none;max-height:none}
-  .split.show-detail .listpane{display:none}
-  .split.show-detail .detail{display:flex}
-  .back{display:inline-flex}
-  .detail-scroll{padding:16px}
-  .composer{padding-left:16px;padding-right:16px}
-  .hint{display:none}
-}
-
-/* ---------- App shell: sidebar (views + connections) beside one main column ---------- */
-.app{display:grid;grid-template-columns:244px minmax(0,1fr);min-height:100vh;min-height:100dvh}
-.side{position:sticky;top:0;height:100vh;height:100dvh;display:flex;flex-direction:column;gap:22px;padding:18px 14px 14px;background:var(--surface);border-right:1px solid var(--line);overflow-y:auto;min-width:0}
-.brand{display:flex;align-items:center;gap:10px;padding:2px 8px}
-.brand-mark{width:30px;height:30px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:13px;flex:none}
-.brand-name{font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:-.01em;white-space:nowrap}
-.views{display:grid;gap:2px;background:none;padding:0;width:auto;max-width:none;border-radius:0}
-.views button{width:100%;padding:9px 10px;gap:10px;justify-content:flex-start;border-radius:9px}
-.views button:hover{background:var(--sunk);color:var(--ink)}
-.views button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent);box-shadow:none}
-.views svg{width:18px;height:18px;flex:none}
-.views .lbl{flex:1;text-align:left;white-space:nowrap}
-.views .count{font-family:var(--mono);font-size:12px;font-weight:500}
-.conn{display:grid;gap:8px;min-width:0}
-.conn-title{margin:0;padding:0 10px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.conn-h{display:none}
-.conn-body{display:grid;gap:8px;min-width:0}
-.sources{display:grid;gap:1px}
-.src{display:grid;grid-template-columns:20px minmax(0,1fr) 8px;gap:9px;align-items:center;border:0;background:transparent;border-radius:8px;padding:6px 10px;font-size:12px;max-width:none}
-.src:hover{background:var(--raised)}
-.src.empty{display:block}
-.src .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.src .info{display:grid;min-width:0;line-height:1.3}
-.src .txt{font-size:11px}
-.src-notes{padding:0 10px;overflow-wrap:anywhere}
-.signout{margin:auto 0 0}
-.signout .btn{width:100%;justify-content:flex-start;padding:8px 10px}
-
-/* ---------- Main column ---------- */
-.main{min-width:0;width:100%;max-width:1500px;margin:0 auto;padding:22px 28px 40px;display:grid;gap:16px;align-content:start}
-.head{align-items:center}
-.hello h1{font-size:clamp(22px,2.2vw,28px)}
-.hello p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-#inboxView{gap:14px;min-width:0}
-.strip-h h2,.abc-h h2,.sec-head h2{margin:0;font-family:var(--display);font-size:17px;line-height:1.25;font-weight:700;letter-spacing:-.01em;text-transform:none;color:var(--ink)}
-.strip-h span,.abc-h span,.sec-head span{font-size:12px;color:var(--muted)}
-
-/* priority bar: one strip instead of four separate cards */
-.tiles{gap:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-.tile{border:0;border-right:1px solid var(--line);border-radius:0;padding:11px 16px;grid-template-columns:auto minmax(0,1fr);align-items:baseline;gap:1px 8px}
-.tile:last-child{border-right:0}
-.tile:hover{background:var(--raised)}
-.tile:focus-visible{outline-offset:-2px}
-.tile[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--line);box-shadow:inset 0 -3px 0 var(--accent)}
-.tile .n{font-size:26px}
-.tile .s{text-align:left;color:var(--muted)}
-
-/* day plan */
-.blocks{gap:8px}
-.block{flex:1 0 210px;padding:9px 12px;border-radius:10px}
-.block .refs{-webkit-line-clamp:1}
-
-/* inbox */
-.split{min-height:clamp(560px,calc(100vh - 300px),920px);border-radius:14px}
-.listpane,.detail{max-height:max(600px,calc(100dvh - 32px))}
-.listpane{min-height:0}
-
-/* ---------- Planner ---------- */
-.planner{gap:26px;min-width:0}
-.pl-nav{position:sticky;top:0;z-index:5;display:flex;gap:4px;padding:8px 0;background:var(--bg);border-bottom:1px solid var(--line)}
-.pl-nav button{border:0;background:transparent;border-radius:8px;padding:6px 12px;font-weight:600;color:var(--muted)}
-.pl-nav button:hover{background:var(--sunk);color:var(--ink)}
-.pl-nav button[aria-current="true"]{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
-.pl-sec{display:grid;gap:12px;min-width:0;scroll-margin-top:60px}
-.sec-head,.abc-h{display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;flex-wrap:wrap}
-.pl-top{grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);align-items:stretch}
-.frog{border-radius:14px;align-content:start;grid-template-columns:minmax(0,1fr)}
-.card{grid-template-columns:minmax(0,1fr);min-width:0}
-.pl-side{align-content:start}
-.grp{container-type:inline-size}
-.grp-h .s{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.task .ctl button,.task .ctl select{min-height:28px;min-width:28px}
-@container (max-width:600px){
-  .task{grid-template-columns:30px minmax(0,1fr)}
-  .task .ctl{grid-row:auto;grid-column:2/3;justify-content:flex-start;margin-top:6px}
-  .grp-h .s{display:none}
-  .grp-h .t{flex:1}
-}
-@media (hover:hover) and (min-width:901px){
-  @container (min-width:601px){
-    .task .ctl .more{order:-1;opacity:0;transition:opacity .12s}
-    .task:hover .ctl .more,.task:focus-within .ctl .more{opacity:1}
-  }
-}
-
-/* ---------- Medium screens: sidebar becomes a top bar ---------- */
-@media (max-width:1179px){
-  .app{grid-template-columns:minmax(0,1fr)}
-  .side{position:relative;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 20px;border-right:0;border-bottom:1px solid var(--line);overflow:visible;z-index:12}
-  .views{display:flex;gap:4px}
-  .views button{width:auto;padding:7px 12px}
-  .conn{position:relative;margin-left:auto;display:block}
-  .conn-title{display:none}
-  .conn-h{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:7px 10px;font-size:12px;font-weight:600}
-  .conn-h:hover{border-color:var(--line-strong)}
-  .conn-h .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
-  .conn-h .dot.warn{background:var(--high)}.conn-h .dot.err{background:var(--crit)}
-  .conn-h svg{width:14px;height:14px;transition:transform .15s}
-  .conn-h[aria-expanded="true"] svg{transform:rotate(180deg)}
-  .conn-body{display:none;position:absolute;right:0;top:calc(100% + 8px);width:340px;padding:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);z-index:20}
-  .conn.open .conn-body{display:grid}
-  .signout{margin:0}
-  .signout .btn{width:auto}
-  .main{padding:18px 20px 36px}
-}
-
-/* ---------- Phones: tabs move to the bottom ---------- */
-@media (max-width:900px){
-  .side{padding:10px 16px;flex-wrap:nowrap}
-  .brand{padding:0;min-width:0}
-  .conn{position:static}
-  .conn-body{left:16px;right:16px;top:100%;width:auto}
-  .views{position:fixed;left:0;right:0;bottom:0;z-index:15;display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 10px calc(6px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line)}
-  .views button{width:100%;min-height:44px;justify-content:center}
-  .views .lbl{flex:none}
-  .views .pill{width:8px;height:8px;padding:0;font-size:0}
-  .main{padding:14px 16px calc(84px + env(safe-area-inset-bottom,0px))}
-  .head{align-items:stretch}
-  .hello{flex-basis:100%}
-  .head-actions{width:100%}
-  .sync{flex:1 1 100%}
-  #refresh,#retriage{flex:1;justify-content:center;min-height:42px}
-  .tile:nth-child(2n){border-right:0}
-  .tile:nth-child(-n+2){border-bottom:1px solid var(--line)}
-  .tile{padding:10px 12px}
-  .tile .l{font-size:11px}
-  .tile .s{display:none}
-  .block{flex:0 0 min(240px,74vw)}
-  .split{min-height:0}
-  .listpane,.detail{max-height:none}
-  .pl-top{grid-template-columns:minmax(0,1fr)}
-  .task .ctl button,.task .ctl select{min-height:34px;min-width:34px}
-  .toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
-}
-@media (max-width:480px){.brand-name{display:none}.signout .btn{padding:8px}}
-@media (prefers-reduced-motion:reduce){.conn-h svg,.task .ctl .more{transition:none}}
-
-/* ---------- Filters ---------- */
-button.src{width:100%;text-align:left;font:inherit;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer}
-button.src:disabled{cursor:default}
-button.src:focus-visible{outline-offset:-2px}
-button.src[aria-pressed="true"]{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
-.src .ic.all{background:var(--sunk);color:var(--muted)}
-.scope select{width:100%;font:inherit;font-size:13px;border:1px solid var(--line);border-radius:9px;padding:7px 10px;background:var(--surface);color:var(--ink)}
-.active-filters{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.fchip{display:inline-flex;align-items:center;gap:6px;max-width:100%;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600}
-.fchip span{font-size:15px;line-height:1}
-.fclear{border:0;background:transparent;color:var(--muted);font-size:12px;font-weight:600;text-decoration:underline;padding:3px}
-.list-foot{flex-wrap:wrap;gap:6px 12px}
-.foot-opts{display:flex;flex-wrap:wrap;gap:6px 14px}
-.chip.due.late{background:var(--crit-soft);color:var(--crit)}.chip.due.today{background:var(--high-soft);color:var(--high)}
-.toast{display:flex;align-items:center;gap:14px}
-.toast-undo{border:0;background:transparent;color:inherit;font-weight:700;text-decoration:underline;padding:2px}
-
-/* ---------- Friendlier planner ---------- */
-.pl-summary{display:grid;grid-template-columns:minmax(0,1fr) auto auto;background:var(--surface);border:1px solid var(--line);border-radius:14px}
-.sum-prog{padding:14px 18px;display:grid;gap:9px;min-width:0}
-.sum-top{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
-.sum-top b{font-size:16px}.sum-top span{font-size:13px;color:var(--muted);white-space:nowrap}
-.sum-bar{height:8px;border-radius:999px;background:var(--sunk);overflow:hidden}
-.sum-bar span{display:block;height:100%;border-radius:999px;background:var(--accent);min-width:0}
-.sum-stat{display:grid;align-content:center;gap:1px;padding:12px 22px;border-left:1px solid var(--line);white-space:nowrap}
-.sum-stat b{font-size:20px;line-height:1.1}.sum-stat span{font-size:12px;color:var(--muted)}
-details.rule{display:block}
-details.rule summary{cursor:pointer;font-weight:600;font-size:14px;line-height:1.35}
-details.rule p{margin:8px 0 0}
-.add input[type="date"]{flex:0 1 150px}
-.ptabs{display:flex;gap:6px;overflow-x:auto;padding:2px}
-.ptab{flex:1 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:10px;padding:9px 14px;font-weight:600}
-.ptab:hover{border-color:var(--line-strong);color:var(--ink)}
-.ptab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.ptab-n{min-width:20px;text-align:center;font-size:12px;border-radius:999px;padding:0 6px;background:var(--sunk);color:var(--ink)}
-.ptab[aria-selected="true"] .ptab-n{background:rgba(255,255,255,.22);color:inherit}
-.tasklist{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-.tl-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:var(--raised);border-bottom:1px solid var(--line)}
-.tl-head p{margin:0;font-size:13px;color:var(--muted)}
-.tl-head .btn{padding:4px 10px;font-size:12px}
-.empty-grp{padding:26px 16px;text-align:center;color:var(--muted)}
-.task{grid-template-columns:22px minmax(0,1fr) auto 34px;gap:4px 12px;padding:12px 16px;align-items:center}
-.task:hover{background:var(--raised)}
-.task.isfrog{background:var(--accent-soft)}
-.task-check{width:20px;height:20px;margin:0;accent-color:var(--accent);cursor:pointer}
-.task-body{display:grid;gap:4px;min-width:0}
-.task .tt{font-size:15px}
-.task-meta{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:12px;color:var(--muted);min-width:0}
-.task-from{overflow-wrap:anywhere}
-.tag{display:inline-flex;border-radius:999px;padding:1px 8px;font-weight:600;background:var(--sunk);white-space:nowrap}
-.tag.wait{background:var(--high-soft);color:var(--high)}
-.latest-filter{display:flex;gap:6px;padding:0 16px 10px}
-.latest-filter button{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:3px 10px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
-.latest-filter button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
-.tag.top{background:var(--surface);color:var(--accent)}
-.tag.due.late{background:var(--crit-soft);color:var(--crit)}.tag.due.today{background:var(--high-soft);color:var(--high)}.tag.due.soon{background:var(--norm-soft);color:var(--norm)}
-.task-move{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:var(--surface);color:var(--ink);max-width:124px}
-.task-ctl{display:flex;gap:8px;align-items:center;justify-content:flex-end;min-width:0}
-.btn.task-open{padding:5px 11px;font-size:13px;white-space:nowrap;text-decoration:none;color:var(--ink)}
-.btn.task-open:visited{color:var(--ink)}
-.task-more{width:34px;height:34px;border:1px solid var(--line);background:var(--surface);border-radius:8px;font-size:17px;line-height:1;color:var(--muted)}
-.task-more:hover,.task-more[aria-expanded="true"]{border-color:var(--line-strong);color:var(--ink)}
-.task-panel{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:6px;padding-top:6px}
-.task-panel .btn{padding:6px 11px;font-size:13px}
-@media (max-width:900px){
-  .pl-summary{grid-template-columns:1fr 1fr}
-  .sum-prog{grid-column:1/-1;border-bottom:1px solid var(--line)}
-  .sum-stat{padding:10px 16px;border-left:0}
-  .sum-stat + .sum-stat{border-left:1px solid var(--line)}
-  .ptab{flex:0 0 auto}
-  .add input[type="text"]{flex-basis:100%}
-  .add select,.add input[type="date"]{flex:1 1 120px}
-  .add .btn{flex:1 1 100%;justify-content:center}
-  .task{grid-template-columns:22px minmax(0,1fr) 34px;padding:12px}
-  .task-ctl{grid-row:2;grid-column:2;justify-content:flex-start;flex-wrap:wrap}
-  .task-move{max-width:none;min-height:36px}
-  .btn.task-open{min-height:36px}
-  .task-more{grid-row:1;grid-column:3}
-  .task-panel{grid-column:2/-1}
-  .task-panel .btn{min-height:38px}
-  .tl-head{padding:10px 12px}
-}
-
-/* ---------- The little Buddha guide: walks along the bottom of every page and shares a thought ---------- */
-.mascot{position:fixed;left:244px;right:0;bottom:0;height:170px;z-index:11;pointer-events:none}
-.mascot[hidden],.m-show[hidden]{display:none}
-.m-stage{position:absolute;inset:0;overflow:hidden}
-.m-shadow{position:absolute;bottom:4px;left:0;border-radius:50%;background:radial-gradient(closest-side,rgba(15,23,42,.32),rgba(15,23,42,0))}
-.m-body{position:absolute;bottom:8px;left:0;will-change:transform}
-.m-body img{display:block;width:100%;height:100%;object-fit:contain;object-position:bottom;transform-origin:50% 100%;filter:drop-shadow(0 6px 10px rgba(15,23,42,.18));user-select:none;-webkit-user-select:none}
-.m-body .m-flat{display:grid;place-items:end center;height:100%;font-size:64px;line-height:1}
-.m-hit{pointer-events:auto;position:absolute;bottom:8px;left:0;width:100px;height:150px;border:0;padding:0;background:transparent;border-radius:999px;cursor:pointer}
-.m-hit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.m-bubble{pointer-events:auto;position:absolute;bottom:162px;left:0;width:min(330px,calc(100vw - 16px));box-sizing:border-box;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:12px 14px;box-shadow:0 12px 32px rgba(15,23,42,.18)}
-.m-bubble::after{content:"";position:absolute;left:calc(var(--tail,48px) - 8px);bottom:-8px;width:14px;height:14px;background:var(--surface);border-right:1px solid var(--line);border-bottom:1px solid var(--line);transform:rotate(45deg)}
-.m-bubble[hidden]{display:none}
-.m-hi{margin:0 0 6px;font-weight:700}
-.m-bubble blockquote{margin:0;display:grid;gap:4px}
-.m-bubble blockquote p{margin:0;font-size:15px;line-height:1.45}
-.m-bubble footer{font-size:12px;color:var(--muted)}
-.m-actions{display:flex;align-items:center;gap:10px;margin-top:10px}
-.m-actions .btn{padding:4px 12px;font-size:13px}
-.m-link{border:0;background:transparent;padding:4px 2px;font:inherit;font-size:12px;color:var(--muted);cursor:pointer}
-.m-link:hover{color:var(--ink)}
-.m-actions .m-link:first-of-type{margin-left:auto}
-.m-show{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:11;width:48px;height:48px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--surface);box-shadow:0 6px 18px rgba(15,23,42,.16);overflow:hidden;display:grid;place-items:center;cursor:pointer}
-.m-show img{height:44px;width:auto;transform:translateY(5px)}
-.toast{z-index:20}
-.main{padding-bottom:180px}
-@media (prefers-reduced-motion:no-preference){.m-bubble.pop{animation:m-pop .35s ease-out}@keyframes m-pop{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}}
-@media (max-width:1179px){.mascot{left:0}}
-@media (max-width:900px){
-  .mascot{bottom:calc(57px + env(safe-area-inset-bottom,0px));height:150px}
-  .m-hit{height:112px;width:84px}
-  .m-bubble{bottom:124px}
-  .m-show{bottom:calc(68px + env(safe-area-inset-bottom,0px))}
-  .main{padding-bottom:calc(220px + env(safe-area-inset-bottom,0px))}
-  body:has(.split.show-detail) .mascot{display:none}
-}
-
-/* ---------- Latest (unsorted) beside the priority buckets ---------- */
-.sort-grid{display:grid;grid-template-columns:minmax(300px,.95fr) minmax(0,1.35fr);gap:16px;align-items:start}
-.buckets{display:grid;gap:10px;min-width:0}
-.latest{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0}
-.latest-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 16px 4px}
-.latest-h h3{margin:0;font-size:16px}
-.latest-n{font-size:12px;font-weight:700;border-radius:999px;padding:1px 8px;background:var(--accent);color:var(--accent-ink)}
-.latest-n.zero{background:var(--sunk);color:var(--muted)}
-.latest-sub{margin:0;padding:0 16px 10px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line)}
-.lrow{display:grid;grid-template-columns:22px minmax(0,1fr);gap:4px 12px;padding:12px 16px;border-bottom:1px solid var(--line)}
-.lrow:last-child{border-bottom:0}
-.lrow:hover{background:var(--raised)}
-.lrow .tt{font-size:15px;overflow-wrap:anywhere}
-.lrow-acts{grid-column:2;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-top:4px}
-.lrow-acts .btn.task-open{margin-right:4px}
-.to-bucket{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 10px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
-.to-bucket:hover{border-color:var(--accent);color:var(--accent)}
-.to-bucket:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.latest-more{display:block;width:100%;border:0;border-top:1px solid var(--line);background:var(--raised);padding:10px;font:inherit;font-size:13px;font-weight:600;color:var(--accent);cursor:pointer}
-.latest-empty{padding:26px 16px;text-align:center;color:var(--muted)}
-.pl-summary{grid-template-columns:minmax(0,1fr) auto auto auto}
-@media (max-width:900px){
-  .sort-grid{grid-template-columns:minmax(0,1fr)}
-  .pl-summary{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .lrow{padding:12px}
-  .to-bucket{min-height:34px;padding:6px 12px}
+/* toast */
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);border-radius:12px;padding:10px 12px 10px 16px;display:none;align-items:center;gap:12px;z-index:30;font-size:15px;max-width:calc(100vw - 32px)}
+.toast.open{display:flex}
+.toast button{background:transparent;border:0;color:var(--bg);font-weight:700;text-decoration:underline;padding:4px}
+.loading{padding:60px 0;text-align:center;color:var(--m)}
+@media (max-width:480px){
+  .hello h1{font-size:22px}
+  .iconbtn .lbl{display:none}
+  nav.tabs button{font-size:14px;padding:9px 2px}
+  .rowact .btn .lbl{display:none}
 }
 </style>
-</head><body>
-<div class="app">
-  <aside class="side" aria-label="Command Desk">
-    <div class="brand"><span class="brand-mark" aria-hidden="true">CD</span><span class="brand-name">Command Desk</span></div>
-
-    <nav class="views" role="tablist" aria-label="View">
-      <button type="button" role="tab" data-view="inbox" aria-selected="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l2 3h4l2-3h5"/></svg>
-        <span class="lbl">Inbox</span><span class="count" id="inboxCount" hidden></span></button>
-      <button type="button" role="tab" data-view="planner" aria-selected="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M8 15l2.5 2.5L16 13"/></svg>
-        <span class="lbl">Daily planner</span><span class="pill" id="frogPill" hidden></span></button>
-    </nav>
-
-    <section class="conn" id="conn" aria-label="Connections">
-      <h2 class="conn-title">Connections</h2>
-      <button class="conn-h" id="connToggle" type="button" aria-expanded="false" aria-controls="connBody">
-        <span class="dot" id="connDot"></span><span id="connSummary">Connecting…</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="conn-body" id="connBody">
-        <div class="sources" id="sources" aria-label="Connected sources"></div>
-        <ul class="src-notes" id="srcNotes" hidden></ul>
-      </div>
-    </section>
-
-    <form class="signout" method="post" action="/logout"><button class="btn ghost" type="submit">Sign out</button></form>
-  </aside>
-
-  <main class="main">
-    <header class="head">
-      <div class="hello">
-        <div class="date" id="today"></div>
-        <h1 id="headline">Getting your day ready…</h1>
-        <p id="subline">Pulling Zoho Mail, Slack and Monday.com.</p>
-      </div>
-      <div class="head-actions">
-        <span class="sync"><span class="pulse busy" id="pulse"></span><span id="syncTxt">Syncing…</span></span>
-        <button class="btn" id="refresh" type="button" title="Fetch new messages now">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Refresh</button>
-        <button class="btn primary" id="retriage" type="button" title="Ask Claude to re-rank everything and rewrite the plans">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg><span>Re-plan my day</span></button>
-      </div>
-    </header>
-
-    <div class="banner" id="pageBanner" hidden></div>
-
-    <div id="inboxView">
-      <section class="tiles" aria-label="Focus filters">
-        <button class="tile crit" type="button" data-tile="critical" aria-pressed="false"><span class="l"><i></i>Do now</span><span class="n" id="kCrit">0</span><span class="s">critical</span></button>
-        <button class="tile high" type="button" data-tile="high" aria-pressed="false"><span class="l"><i></i>Today</span><span class="n" id="kHigh">0</span><span class="s">high priority</span></button>
-        <button class="tile reply" type="button" data-tile="reply" aria-pressed="false"><span class="l"><i></i>Waiting on your reply</span><span class="n" id="kReply">0</span><span class="s">threads</span></button>
-        <button class="tile mon" type="button" data-tile="overdue" aria-pressed="false"><span class="l"><i></i>Overdue</span><span class="n" id="kMon">0</span><span class="s">items</span></button>
-      </section>
-
-      <section class="plan-strip" aria-labelledby="planH">
-        <div class="strip-h"><h2 id="planH">Your day</h2><span id="planMeta"></span></div>
-        <div class="blocks" id="blocks"></div>
-      </section>
-
-      <section class="split" id="split" aria-label="Inbox">
-        <div class="listpane">
-          <div class="tools">
-            <label class="search" for="q"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-              <span class="visually-hidden">Search</span><input id="q" type="search" placeholder="Search people, clients, subjects…" autocomplete="off"></label>
-            <div class="seg" role="group" aria-label="Source">
-              <button type="button" data-src="all" aria-pressed="true">All</button>
-              <button type="button" data-src="email" aria-pressed="false">Email</button>
-              <button type="button" data-src="slack" aria-pressed="false">Slack</button>
-              <button type="button" data-src="monday" aria-pressed="false">Monday</button>
-            </div>
-            <label class="scope" for="scopeFilter"><span class="visually-hidden">Client or channel</span><select id="scopeFilter"></select></label>
-            <div class="active-filters" id="activeFilters" hidden></div>
-          </div>
-          <div class="listscroll" id="list" role="listbox" aria-label="Items"></div>
-          <div class="list-foot"><span id="listCount"></span><span class="foot-opts"><label for="showMuted" id="showMutedWrap" hidden><input type="checkbox" id="showMuted"> <span id="mutedCount"></span></label><label for="showDone"><input type="checkbox" id="showDone"> Show handled</label></span></div>
-        </div>
-        <div class="detail" id="detail"></div>
-      </section>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="hello"><h1 id="greet">Hello</h1><p id="dateLine"></p></div>
+    <div class="tools">
+      <button class="iconbtn" id="syncBtn" type="button" title="Connections and refresh"><span class="dot" id="syncDot"></span><span class="lbl" id="syncTxt">Loading</span></button>
+      <form method="post" action="/logout" style="margin:0"><button class="iconbtn" type="submit" title="Sign out"><span aria-hidden="true">⎋</span><span class="lbl">Sign out</span></button></form>
     </div>
+  </header>
+  <p class="headline" id="headline" hidden></p>
 
-    <section class="planner" id="plannerView" hidden aria-label="Daily planner">
-      <section class="pl-summary" id="plSummary" aria-label="Today's progress"></section>
-      <nav class="pl-nav" aria-label="Planner sections">
-        <button type="button" data-jump="plFocus" aria-current="true">Start here</button>
-        <button type="button" data-jump="plAbc">Today's list</button>
-        <button type="button" data-jump="plTomorrow">Tonight</button>
-      </nav>
-      <section class="pl-sec" id="plFocus" aria-labelledby="focusH">
-        <div class="sec-head"><h2 id="focusH">Start here</h2><span>Do this one task before email and Slack.</span></div>
-        <div class="pl-top">
-          <article class="frog" id="frogCard"></article>
-          <aside class="pl-side">
-            <div class="card timer" id="timer"></div>
-            <details class="card rule" id="rule"></details>
-          </aside>
-        </div>
-      </section>
-      <section class="abc pl-sec" id="plAbc" aria-labelledby="abcH">
-        <div class="abc-h"><h2 id="abcH">Today's list</h2><span id="abcMeta"></span></div>
-        <form class="add" id="addTask">
-          <label class="visually-hidden" for="newTask">New task</label>
-          <input id="newTask" type="text" placeholder="Add a task, e.g. “Write the VenueScale proposal”" autocomplete="off">
-          <label class="visually-hidden" for="newAbc">Priority</label>
-          <select id="newAbc"><option value="A">Must do</option><option value="B" selected>Should do</option><option value="C">Could do</option><option value="D">Hand off</option><option value="E">Drop</option></select>
-          <label class="visually-hidden" for="newDue">Due date (optional)</label>
-          <input id="newDue" type="date" title="Due date (optional)">
-          <button class="btn primary" type="submit">Add task</button>
-        </form>
-        <div class="sort-grid">
-          <section class="latest" aria-labelledby="latestH">
-            <div class="latest-h"><h3 id="latestH">Unread</h3><span class="latest-n" id="latestN">0</span></div>
-            <div class="latest-filter" id="latestFilter" role="group" aria-label="Show in Unread"></div>
-            <p class="latest-sub">New messages and tasks land here, newest first. Put each one in a bucket. A new reply brings it back here.</p>
-            <div id="latestList"></div>
-          </section>
-          <div class="buckets">
-            <div class="ptabs" id="planTabs" role="tablist" aria-label="Task priority"></div>
-            <div class="tasklist" id="abcGrid" role="tabpanel" aria-labelledby="planTab-A"></div>
-          </div>
-        </div>
-      </section>
-      <section class="pl-sec" id="plTomorrow" aria-labelledby="tmH">
-        <div class="abc-h"><h2 id="tmH">Plan tomorrow tonight</h2><span>Ten minutes now saves hours tomorrow.</span></div>
-        <div class="tmrw" id="tmrw"></div>
-      </section>
-    </section>
-  </main>
+  <nav class="tabs" role="tablist" aria-label="Views">
+    <button role="tab" data-tab="today" aria-selected="true">Today <span class="count" id="cToday">0</span></button>
+    <button role="tab" data-tab="inbox" aria-selected="false">Inbox <span class="count" id="cInbox">0</span></button>
+    <button role="tab" data-tab="upcoming" aria-selected="false">Upcoming</button>
+    <button role="tab" data-tab="done" aria-selected="false">Done</button>
+  </nav>
+
+  <form class="add" id="addForm" autocomplete="off">
+    <label class="sr" for="addText">New task</label>
+    <input id="addText" placeholder="Add a task…  (press N)" maxlength="300">
+    <label class="sr" for="addDay">When</label>
+    <select id="addDay"><option value="today">Today</option><option value="tomorrow">Tomorrow</option><option value="someday">Someday</option></select>
+    <button class="btn primary" type="submit">Add</button>
+  </form>
+
+  <main id="view"><div class="loading">Loading your day…</div></main>
 </div>
-<div class="toast" id="toast" hidden role="status"></div>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toastTxt"></span><button id="toastUndo" type="button">Undo</button></div>
 
 <script>
 (() => {
-  const HOUR = 3600000;
+  "use strict";
   const $ = (id) => document.getElementById(id);
-  const S = {
-    mcp: null, sample: null, accounts: [], mail: {}, slack: [], mailErr: {}, slackErr: null, mailAt: 0, slackAt: 0,
-    mon: { boards: [], tasks: {}, updates: {}, err: {}, ctx: {}, at: 0 },
-    triage: null, triageAt: 0, planning: false,
-    src: "all", tile: null, q: "", showDone: false, selected: null, collapsed: { fyi: true, later: true }, view: "inbox", plan: null, planT: null, today: "", tomorrow: "", streak: 0, collapsedE: true,
-    conn: null, scope: null, showMuted: false, buckets: {}, latestShow: 25, latestWaiting: false, planTab: "A", openRow: null, example: false, loading: true, sending: false, draftCtl: null, confirmFor: null
-  };
-  const RANK = { critical: 0, high: 1, normal: 2, low: 3, fyi: 4 };
-  const LABEL = { critical: "Critical", high: "High", normal: "Normal", low: "Low", fyi: "FYI" };
-  const GROUPS = [
-    { id: "now", title: "Do now", match: (u) => u === "critical" },
-    { id: "today", title: "Today", match: (u) => u === "high" },
-    { id: "week", title: "This week", match: (u) => u === "normal" },
-    { id: "later", title: "Later", match: (u) => u === "low" },
-    { id: "fyi", title: "FYI & newsletters", match: (u) => u === "fyi" }
-  ];
-  const EMOJI = { ":red_circle:": "🔴", ":large_yellow_circle:": "🟡", ":large_green_circle:": "🟢", ":new:": "🆕", ":white_check_mark:": "✅", ":warning:": "⚠️", ":fire:": "🔥" };
-  const SRC = { email: { cls: "mail", letter: "Z" }, slack: { cls: "slack", letter: "S" }, monday: { cls: "monday", letter: "M" } };
-
-  /* ---------- per-viewer memory (handled items, ticked steps) ---------- */
-  const store = {
-    get(k, d) { try { const v = localStorage.getItem("cd:" + k); return v ? JSON.parse(v) : d; } catch { return d; } },
-    set(k, v) { try { localStorage.setItem("cd:" + k, JSON.stringify(v)); } catch {} }
-  };
-  let handled = store.get("handled", {}), ticks = store.get("ticks", {});
-  const isDone = (k) => !!handled[k];
-  function setDone(k, v) { if (v) handled[k] = Date.now(); else delete handled[k];
-    const cut = Date.now() - 14 * 24 * HOUR; for (const x in handled) if (handled[x] < cut) delete handled[x]; store.set("handled", handled); api("/api/mark", { key: k, done: !!v }).catch(() => {}); }
-
-  /* ---------- helpers ---------- */
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-  const fmtTime = (ms) => { if (!ms) return "—"; const d = new Date(ms), now = new Date();
-    if (now.toDateString() === d.toDateString()) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    if (new Date(now - 864e5).toDateString() === d.toDateString()) return "Yesterday";
-    return d.toLocaleDateString([], { month: "short", day: "numeric" }); };
-  const ago = (ms) => { const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? "just now" : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`; };
-  const emo = (s) => String(s || "").replace(/:[a-z_]+:/g, (m) => EMOJI[m] || "");
-  const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
-  const dig = (o, ...keys) => keys.reduce((a, k) => (a && a[k] != null ? a[k] : undefined), o);
-  const ent = (s) => String(s || "").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-  const strip = (s) => String(s || "").replace(/ /g, " ").replace(/\n{3,}/g, "\n\n").trim();
-  const toast = (msg, undo) => { const t = $("toast"); t.replaceChildren(document.createTextNode(msg));
-    if (undo) { const b = el("button", "toast-undo", "Undo"); b.type = "button"; b.onclick = () => { t.hidden = true; undo(); }; t.append(b); }
-    t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), undo ? 7000 : 3200); };
-  const shortDate = (d) => new Date(d + "T00:00").toLocaleDateString([], { day: "numeric", month: "short" });
-  const tomorrowStr = () => { const d = new Date(Date.now() + 864e5); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
-  const dueInfo = (d) => { if (!d) return null; const t = todayStr();
-    return d < t ? { text: `Overdue · ${shortDate(d)}`, short: "overdue", cls: "late" } : d === t ? { text: "Due today", short: "due today", cls: "today" } : d === tomorrowStr() ? { text: "Due tomorrow", short: "due tomorrow", cls: "soon" } : { text: `Due ${shortDate(d)}`, short: "due " + shortDate(d), cls: "" }; };
-  const wide = () => window.matchMedia("(min-width: 901px)").matches;
-  // How long an item has waited for your reply ("today", "3 days").
-  const waitAge = (it) => { const d = Math.floor((Date.now() - (it.time || Date.now())) / 864e5); return d < 1 ? "today" : d === 1 ? "1 day" : `${d} days`; };
-  const waitTag = (it) => (it.waiting ? el("span", "tag wait", `No reply · ${waitAge(it)}`) : null);
+  const HOUR = 3600e3, DAY = 864e5;
+  const store = { get(k, d) { try { const v = localStorage.getItem("cd2:" + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+                  set(k, v) { try { localStorage.setItem("cd2:" + k, JSON.stringify(v)); } catch {} } };
 
-  function errCopy(e, server) {
-    switch (e && e.code) {
-      case "needs_reauth": return `${server} needs reconnecting: claude.ai Settings → Connectors.`;
-      case "server_not_connected": return `${server} isn't connected. Add it in claude.ai Settings → Connectors.`;
-      case "selection_required": return `More than one ${server} connector. Pick one in the prompt claude.ai shows.`;
-      case "not_in_manifest": case "approval_required": return `${server} isn't allowed for this page yet. Allow it from the artifact's Permissions menu.`;
-      case "blocked_by_policy": return `Your organization blocks this ${server} action.`;
-      case "server_unavailable": return `${server} didn't answer. Showing the last data; it retries on the next refresh.`;
-      case "tool_error": return `${server} reported an error: ${String(e.message || "").slice(0, 140)}`;
-      default: return `${server} couldn't be reached (${(e && e.code) || "unknown"}).`;
-    }
-  }
-  const AUTHZ = ["needs_reauth", "server_not_connected", "not_in_manifest", "blocked_by_policy", "approval_required"];
+  let S = null;                                     // server snapshot
+  let tab = store.get("tab", "today");
+  let inboxFilter = "all", inboxQuery = "", showLow = false;
 
-  /* ---------- parsing ---------- */
-  function parseAccounts(payload) {
-    const d = dig(payload, "data", "data") || dig(payload, "data") || payload, out = [];
-    const push = (a) => a && a.accountId && out.push({ id: String(a.accountId), email: a.emailAddress || a.primaryEmailAddress || a.mailboxAddress || "Zoho account" });
-    if (Array.isArray(d)) d.forEach(push); else if (d) { push(d.primaryAccount); Object.values(d).forEach((v) => Array.isArray(v) && v.forEach(push)); }
-    const seen = new Set(); return out.filter((a) => !seen.has(a.id) && seen.add(a.id));
+  /* ---------- api ---------- */
+  async function api(path, body) {
+    const r = await fetch(path, body === undefined ? { credentials: "same-origin" } : { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (r.status === 401) { location.href = "/login"; throw new Error("Signed out"); }
+    let j = {}; try { j = await r.json(); } catch {}
+    if (!r.ok) throw new Error(j.error || `Request failed (${r.status})`);
+    return j;
   }
-  function parseMails(payload, acct) {
-    const msgs = dig(payload, "data", "data", "messages") || dig(payload, "data", "messages") || dig(payload, "data", "data") || [];
-    return (Array.isArray(msgs) ? msgs : []).map((m) => ({
-      key: "e:" + m.messageId, source: "email", account: acct, msgId: String(m.messageId),
-      from: ent(m.sender || m.fromAddress || ""), fromAddr: m.fromAddress || "", subject: ent(m.subject) || "(no subject)",
-      preview: String(m.summary || "").replace(/\s+/g, " ").trim(), time: Number(m.receivedTime) || 0,
-      unread: String(m.status) === "0", important: String(m.priority) === "1" || String(m.priority) === "2"
-    })).map(tagMondayMail);
-  }
+
+  /* ---------- dates ---------- */
+  const tz = () => (S && S.tz) || undefined;
+  const dayOf = (ms) => new Intl.DateTimeFormat("en-CA", { timeZone: tz(), year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
+  const today = () => S.today, tomorrow = () => S.tomorrow;
+  const addDays = (d, n) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+  const niceDay = (d) => {
+    if (!d) return "Someday";
+    if (d === today()) return "Today"; if (d === tomorrow()) return "Tomorrow"; if (d === addDays(today(), -1)) return "Yesterday";
+    return new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  };
+  const ago = (ms) => { const m = (Date.now() - ms) / 60000; if (m < 1) return "now"; if (m < 60) return Math.round(m) + "m"; if (m < 1440) return Math.round(m / 60) + "h"; return Math.round(m / 1440) + "d"; };
+  const clock = (ms) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: tz() });
+
+  /* ---------- incoming items (email, Slack, Monday) ---------- */
   const MON_EMAIL_ACCTS = [
     { re: /mood\s*creative|moodcreative|alana cocking/i, label: "Mood Creative", url: "https://moodcreative-company.monday.com" },
     { re: /great[\s-]*escape|great-escape-gang|greatescapeau|\btge\b/i, label: "The Great Escape", url: "https://the-great-escape-gang.monday.com" }
   ];
   function tagMondayMail(m) {
-    if (/@moodcreative\.com\.au$/i.test(m.fromAddr.trim())) return { ...m, client: "Mood Creative" };
-    if (/@greatescapeau\.com$/i.test(m.fromAddr.trim())) return { ...m, client: "The Great Escape" };
-    if (!/^notifications@monday\.com$/i.test(m.fromAddr.trim())) return m;
-    const blob = `${m.from} ${m.subject} ${m.preview}`;
-    const acct = MON_EMAIL_ACCTS.find((a) => a.re.test(blob));
-    const who = String(m.from).replace(/\s+via monday\.com$/i, "");
+    const addr = String(m.fromAddr || "").trim();
+    if (/@moodcreative\.com\.au$/i.test(addr)) return { ...m, client: "Mood Creative" };
+    if (/@greatescapeau\.com$/i.test(addr)) return { ...m, client: "The Great Escape" };
+    if (!/^notifications@monday\.com$/i.test(addr)) return m;
+    const blob = `${m.from} ${m.subject} ${m.preview}`, acct = MON_EMAIL_ACCTS.find((a) => a.re.test(blob));
     const kind = (m.subject.match(/^\[([^\]]+)\]/) || [])[1] || "Update";
-    const subject = m.subject.replace(/^\[[^\]]+\]\s*/, "").replace(/&quot;/g, "\"").replace(/&#39;/g, "'");
-    return { ...m, mondayMail: true, from: who, monKind: kind, subject: `${kind}: ${subject}`, monAcct: acct ? acct.label : "Monday (other account)", link: m.mondayLink || (acct ? acct.url : ""), client: acct ? acct.label : "" };
+    const subject = m.subject.replace(/^\[[^\]]+\]\s*/, "");
+    return { ...m, mondayMail: true, from: String(m.from).replace(/\s+via monday\.com$/i, ""), subject: `${kind}: ${subject}`, monAcct: acct ? acct.label : "Monday", link: m.mondayLink || (acct ? acct.url : ""), client: acct ? acct.label : "" };
   }
-  function parseSlack(payload) {
-    const md = typeof payload === "string" ? payload : (payload && payload.results) || "";
-    return String(md).split(/### Result \d+ of \d+/).slice(1).map((p) => {
-      const g = (re) => { const m = p.match(re); return m ? m[1].trim() : ""; };
-      const permalink = g(/Permalink:\s*\[link\]\(([^)\s]+)\)/).replace(/\\\//g, "/");
-      const ts = g(/Message_ts:\s*([\d.]+)/);
-      const text = ((p.split(/\nText:\s*\n?/)[1] || "").split(/\n---/)[0] || "").trim();
-      const chanLine = g(/Channel:\s*(.+)/);
-      return {
-        key: "s:" + ts, source: "slack", channelId: g(/Channel:.*?\(ID:\s*([A-Z0-9]+)\)/), channel: chanLine.replace(/\s*\(ID:.*$/, "").replace(/^#/, ""),
-        from: g(/From:\s*(.+)/).replace(/\s*<.*$/, "").replace(/\s*\(ID.*$/, ""), ts,
-        threadTs: (permalink.match(/thread_ts=([\d.]+)/) || [])[1] || ts, link: permalink,
-        subject: emo(text.split("\n")[0]).slice(0, 140) || "(message)", preview: emo(text).replace(/<(https?:[^>|]+)[^>]*>/g, "$1").trim(),
-        time: Math.round(parseFloat(ts) * 1000) || 0, unread: false
-      };
-    }).filter((m) => m.ts);
-  }
-  function parseTasks(payload, board) {
-    return ((payload && payload.items) || []).map((it) => {
-      const cv = it.column_values || {};
-      const pick = (re) => { const k = Object.keys(cv).find((k) => re.test(k)); return k ? String(cv[k] || "") : ""; };
-      const status = cv.status != null ? String(cv.status) : pick(/status/i);
-      const due = String(cv.date4 || pick(/^date/i) || "").slice(0, 10);
-      const people = String(cv.person || cv.people || pick(/person|people|owner/i) || "");
-      const client = String(cv.color_mkwg7t3e || pick(/client/i) || "");
-      const group = (it.group && it.group.title) || "";
-      return { key: "t:" + it.id, source: "monday", kind: "task", server: board.server, itemId: Number(it.id), board: board.label || board.name, link: it.url || "",
-        from: people || "Unassigned", subject: it.name || "(untitled item)", status, due, client, group,
-        preview: [status && "Status: " + status, due && "Due " + due, client && "Client: " + client, people && "Assigned: " + people, group && "Group: " + group].filter(Boolean).join("\n"),
-        time: Date.parse(it.updated_at) || 0, unread: false };
-    }).filter((t) => !/^done$/i.test(t.status) && !/complete/i.test(t.group));
-  }
-  function parseUpdates(payload, board) {
-    const cutoff = Date.now() - 3 * 24 * HOUR;
-    return ((payload && payload.updates) || []).map((u) => {
-      const reps = Array.isArray(u.replies) ? u.replies : [];
-      const last = reps.length ? reps[reps.length - 1] : u;
-      const t = Date.parse(last.created_at || u.updated_at || u.created_at) || 0;
-      const thread = [`${(u.creator && u.creator.name) || "Someone"}: ${strip(u.text_body)}`].concat(reps.map((r) => `${(r.creator && r.creator.name) || "Someone"}: ${strip(r.text_body)}`));
-      const firstLine = strip(last.text_body).split("\n").find((l) => l.trim()) || "(update)";
-      return { key: "u:" + u.id, source: "monday", kind: "update", server: board.server, updateId: Number(u.id), itemId: Number(u.item_id), board: board.label || board.name,
-        link: u.item_id && board.url ? `${board.url}/pulses/${u.item_id}` : board.url || "",
-        from: (last.creator && last.creator.name) || "", starter: (u.creator && u.creator.name) || "",
-        subject: firstLine.slice(0, 140), preview: thread.join("\n\n").slice(0, 3000), time: t, unread: false, replies: reps.length };
-    }).filter((u) => u.time >= cutoff);
-  }
-
-  /* ---------- quick urgency (keywords) ---------- */
+  const RANK = { critical: 0, high: 1, normal: 2, low: 3, fyi: 4 };
   const PROMO = /no-?reply|newsletter|marketing|promo|notifications?@|email@email|mailer|digest/i;
   function quick(it) {
     if (it.source === "monday" && it.kind === "task") {
-      const today = todayStr(), overdue = it.due && it.due < today, stuck = /stuck|changes required/i.test(it.status);
+      const overdue = it.due && it.due < today(), stuck = /stuck|changes required/i.test(it.status);
       if (/de-prioriti/i.test(it.status)) return "fyi";
-      if (stuck && (overdue || it.due === today)) return "critical";
-      if (overdue || it.due === today || stuck || /ready for review/i.test(it.status)) return "high";
+      if (stuck && (overdue || it.due === today())) return "critical";
+      if (overdue || it.due === today() || stuck || it.clientReplied) return "high";
       if (/waiting|sent to client|approved/i.test(it.status)) return "low";
       return "normal";
     }
@@ -843,930 +245,374 @@ details.rule p{margin:8px 0 0}
       if (/digest|weekly|summary|daily update/i.test(blob)) return "fyi";
       return "normal";
     }
-    if (it.source === "email" && (PROMO.test(it.fromAddr) || /unsubscribe|% off|deals?\b|sale ends/i.test(blob))) return "fyi";
+    if (it.source === "email" && (PROMO.test(it.fromAddr || "") || /unsubscribe|% off|deals?\b|sale ends/i.test(blob))) return "fyi";
     if (/🔴|urgent|asap|outage|site (is )?down|not working|broken|critical|immediately/i.test(blob)) return "critical";
     if (/🟡|today|eod|deadline|by tomorrow|please|can you|could you|\?|waiting on|follow.?up/i.test(blob) || it.important) return "high";
     return it.unread ? "normal" : "low";
   }
-
-  function allItems() {
-    return [...Object.values(S.mail).flat(), ...S.slack, ...Object.values(S.mon.tasks).flat(), ...Object.values(S.mon.updates).flat()].sort((a, b) => b.time - a.time);
-  }
-  // Emails that stay out of the inbox and planner. Nothing is changed in Zoho.
-  function isMuted(it, ai, urgency) {
-    if (it.source !== "email" || it.waiting) return false; // someone is waiting on your reply: never hide it
+  function isLow(it, ai, urgency) {
+    if (it.waiting) return false;
+    if (it.source === "monday" && it.kind === "task") return urgency === "fyi";
+    if (it.source !== "email") return false;
     if (urgency === "low" || urgency === "fyi") return true;
     return !!(it.promo || (ai && ai.promotional)) && urgency !== "critical" && urgency !== "high";
   }
-  const connMatch = (i, c) => c.kind === "email" ? i.source === "email" && !!i.account && i.account.email === c.value
-    : c.kind === "slack" ? i.source === "slack" && i.server === c.value
-    : (i.source === "monday" && i.server === c.value) || (!!i.mondayMail && i.monAcct === c.value);
-  const scopeMatch = (i, sc) => { const at = sc.indexOf(":"), k = sc.slice(0, at), v = sc.slice(at + 1);
-    return k === "client" ? i.client === v : k === "channel" ? i.source === "slack" && i.channel === v : i.source === "monday" && i.board === v; };
-  const inScope = (i) => (!S.conn || connMatch(i, S.conn)) && (!S.scope || scopeMatch(i, S.scope));
-  function merged() {
-    const t = S.triage && S.triage.items ? Object.fromEntries(S.triage.items.map((x) => [x.id, x])) : {};
-    return allItems().map((it) => {
-      const ai = t[it.key], q = quick(it);
-      return ai ? { ...it, urgency: RANK[ai.urgency] != null ? ai.urgency : q, title: ai.title || it.subject, why: ai.why || "", plan: Array.isArray(ai.plan) ? ai.plan.slice(0, 5) : [], client: ai.client || it.client || "", replyNeeded: !!ai.replyNeeded, abcde: ai.abcde, delegateTo: ai.delegateTo || "", dueDate: it.due || ai.dueDate || "", dueNote: it.due ? "" : ai.dueNote || "", muted: isMuted(it, ai, RANK[ai.urgency] != null ? ai.urgency : q), ai: true }
-        : { ...it, urgency: q, title: it.subject, why: "", plan: [], client: it.client || "", replyNeeded: (q === "critical" || q === "high") && it.kind !== "task", dueDate: it.due || "", dueNote: "", muted: isMuted(it, null, q), ai: false };
-    }).sort((a, b) => RANK[a.urgency] - RANK[b.urgency] || (a.dueDate || "9999").localeCompare(b.dueDate || "9999") || b.time - a.time);
+  let ITEMS = [], BYKEY = {};
+  function buildItems() {
+    const ai = S.triage && S.triage.items ? Object.fromEntries(S.triage.items.map((x) => [x.id, x])) : {};
+    const raw = [...Object.values(S.mail || {}).flat().map(tagMondayMail), ...(S.slack || []), ...((S.mon && S.mon.tasks) || []), ...((S.mon && S.mon.updates) || [])];
+    const seen = new Set();
+    ITEMS = raw.filter((i) => i && i.key && !seen.has(i.key) && seen.add(i.key)).map((it) => {
+      const a = ai[it.key], q = quick(it), urgency = a && RANK[a.urgency] != null ? a.urgency : q;
+      return { ...it, urgency, title: (a && a.title) || it.subject, why: (a && a.why) || "", plan: (a && Array.isArray(a.plan)) ? a.plan.slice(0, 5) : [],
+        due: it.due || (a && a.dueDate) || "", low: isLow(it, a, urgency) };
+    }).sort((a, b) => (b.waiting ? 1 : 0) - (a.waiting ? 1 : 0) || RANK[a.urgency] - RANK[b.urgency] || b.time - a.time);
+    BYKEY = Object.fromEntries(ITEMS.map((i) => [i.key, i]));
   }
-  function visible(items) {
-    const q = S.q.trim().toLowerCase();
-    return items.filter((i) => {
-      if (!S.showDone && isDone(i.key)) return false;
-      if (i.muted && !S.showMuted) return false;
-      if (!inScope(i)) return false;
-      if (S.src !== "all" && (i.mondayMail ? "monday" : i.source) !== S.src) return false;
-      if (S.tile === "critical" && i.urgency !== "critical") return false;
-      if (S.tile === "high" && i.urgency !== "high") return false;
-      if (S.tile === "reply" && !i.replyNeeded) return false;
-      if (S.tile === "overdue" && !(i.dueDate && i.dueDate < todayStr())) return false;
-      if (q && !`${i.title} ${i.subject} ${i.from} ${i.client} ${i.board || ""} ${i.channel || ""} ${i.preview}`.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }
-  const isCollapsed = (gid) => !!S.collapsed[gid] && !S.q && !S.tile && !S.conn && !S.scope && !S.showMuted;
-  const navOrder = () => { const vis = visible(ITEMS); return GROUPS.flatMap((g) => isCollapsed(g.id) ? [] : vis.filter((i) => g.match(i.urgency))); };
+  const handled = (key) => !!(S.handled && S.handled[key]);
+  const taskFor = (key) => (S.tasks || []).find((t) => t.ref === key && !t.done);
+  const inboxOpen = () => ITEMS.filter((i) => !handled(i.key));
+  const srcKind = (it) => (it.mondayMail ? "monday" : it.source);
+  const SRC_LETTER = { email: "E", slack: "S", monday: "M", task: "✓" };
+  const SRC_NAME = { email: "Email", slack: "Slack", monday: "Monday" };
+  const where = (it) => it.source === "email" ? (it.mondayMail ? `Monday · ${it.monAcct}` : it.client || "Email")
+    : it.source === "slack" ? `Slack · ${it.channel || ""}` : `${it.server || "Monday"} · ${it.board || ""}`;
+  const waitDays = (it) => Math.max(1, Math.floor((Date.now() - it.time) / DAY));
 
-  /* ---------- render ---------- */
-  let ITEMS = [];
+  /* ---------- tasks ---------- */
+  const openTasks = () => (S.tasks || []).filter((t) => !t.done);
+  const todayTasks = () => openTasks().filter((t) => t.day && t.day <= today())
+    .sort((a, b) => (b.top - a.top) || a.day.localeCompare(b.day) || a.createdAt - b.createdAt);
+  const newId = () => "p:" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-3);
+
+  async function saveTask(id, patch, quiet) {
+    const list = S.tasks || (S.tasks = []);
+    let t = list.find((x) => x.id === id);
+    if (t) { if ("done" in patch && patch.done !== t.done) t.doneAt = patch.done ? Date.now() : 0; Object.assign(t, patch); }
+    else { t = { id, text: "", day: "", top: false, done: false, doneAt: 0, ref: "", note: "", createdAt: Date.now(), ...patch }; list.push(t); }
+    if ("done" in patch && t.ref) { if (patch.done) S.handled[t.ref] = Date.now(); else delete S.handled[t.ref]; }
+    render();
+    try { const r = await api("/api/task", { id, ...patch }); S.tasks = r.tasks; if (!quiet) render(); }
+    catch (e) { toast(e.message); }
+    return t;
+  }
+  async function removeTask(id) {
+    const old = (S.tasks || []).find((t) => t.id === id); if (!old) return;
+    S.tasks = S.tasks.filter((t) => t.id !== id); render();
+    try { await api("/api/task", { id, remove: true }); } catch (e) { toast(e.message); }
+    toast("Task deleted", () => saveTask(old.id, { text: old.text, day: old.day, top: old.top, ref: old.ref, note: old.note }));
+  }
+  function toggleDone(t) {
+    const done = !t.done;
+    saveTask(t.id, { done });
+    if (done) toast("Done: " + t.text.slice(0, 40), () => saveTask(t.id, { done: false }));
+  }
+  function addFromItem(it, day) {
+    const have = taskFor(it.key); if (have) { toast("Already on your list"); return; }
+    const id = newId();
+    saveTask(id, { text: it.title, day: day || today(), ref: it.key });
+    toast(`Added to ${niceDay(day || today())}`, () => removeTaskSilently(id));
+  }
+  async function removeTaskSilently(id) { S.tasks = (S.tasks || []).filter((t) => t.id !== id); render(); try { await api("/api/task", { id, remove: true }); } catch {} }
+  async function markItem(it, done) {
+    if (done) S.handled[it.key] = Date.now(); else delete S.handled[it.key];
+    const t = done ? taskFor(it.key) : null;
+    render();
+    try { await api("/api/mark", { key: it.key, done }); if (t) await saveTask(t.id, { done: true }, true); } catch (e) { toast(e.message); }
+    if (done) toast("Cleared from inbox", () => markItem(it, false));
+  }
+
+  /* ---------- rendering helpers ---------- */
+  const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>';
+  function checkBtn(on, label, fn) { const b = el("button", "check" + (on ? " on" : "")); b.type = "button"; b.innerHTML = CHECK; b.setAttribute("aria-label", label); b.onclick = fn; return b; }
+  function section(title, hint, extra) {
+    const s = el("section", "block"), h = el("div", "sechead"); h.append(el("h2", null, title));
+    if (hint) h.append(el("span", "hint", hint)); if (extra) h.append(extra);
+    s.append(h); return s;
+  }
+  function itemTags(it, meta) {
+    if (it.waiting) meta.append(el("span", "tag warn", `No reply · ${waitDays(it)} day${waitDays(it) > 1 ? "s" : ""}`));
+    if (it.due && it.due < today()) meta.append(el("span", "tag bad", "Overdue"));
+    else if (it.due === today()) meta.append(el("span", "tag warn", "Due today"));
+    else if (it.urgency === "critical") meta.append(el("span", "tag bad", "Urgent"));
+    if (it.clientReplied) meta.append(el("span", "tag ok", "Client replied"));
+  }
+  function taskRow(t) {
+    const li = el("li", t.done ? "done" : "");
+    li.append(checkBtn(t.done, t.done ? "Mark not done" : "Mark done", () => toggleDone(t)));
+    const body = el("button", "body"); body.type = "button"; body.append(el("div", "t", t.text));
+    const meta = el("div", "meta");
+    if (!t.done && t.day && t.day < today()) meta.append(el("span", "tag warn", "From " + niceDay(t.day)));
+    if (!t.done && t.day > today() && tab !== "upcoming") meta.append(el("span", "tag", niceDay(t.day)));
+    const it = t.ref && BYKEY[t.ref];
+    if (it) { meta.append(el("span", null, `${SRC_NAME[srcKind(it)]} · ${it.from || where(it)}`)); itemTags(it, meta); }
+    if (t.note) meta.append(el("span", null, "📝 note"));
+    if (t.done && t.doneAt) meta.append(el("span", null, "Done " + clock(t.doneAt)));
+    if (meta.childNodes.length) body.append(meta);
+    body.onclick = () => openTask(t);
+    li.append(body);
+    if (!t.done) {
+      const star = el("button", "star", t.top ? "★" : "☆"); star.type = "button"; star.setAttribute("aria-pressed", String(!!t.top));
+      star.setAttribute("aria-label", t.top ? "Remove from top priorities" : "Make a top priority"); star.title = star.getAttribute("aria-label");
+      star.onclick = () => { if (!t.top && todayTasks().filter((x) => x.top).length >= 3) toast("Tip: keep it to 3 top priorities"); saveTask(t.id, { top: !t.top }); };
+      li.append(star);
+    }
+    return li;
+  }
+  function itemRow(it, opts = {}) {
+    const li = el("li"), k = srcKind(it);
+    const s = el("span", "src " + k, SRC_LETTER[k]); s.title = SRC_NAME[k]; s.setAttribute("aria-hidden", "true"); li.append(s);
+    const body = el("button", "body"); body.type = "button"; body.append(el("div", "t", it.title));
+    const meta = el("div", "meta"); meta.append(el("span", null, [it.from, where(it)].filter(Boolean).join(" · ") + " · " + ago(it.time)));
+    itemTags(it, meta); body.append(meta); body.onclick = () => openItem(it);
+    li.append(body);
+    const act = el("div", "rowact");
+    if (opts.done) {
+      const u = el("button", "btn", "Undo"); u.type = "button"; u.onclick = () => markItem(it, false); act.append(u);
+    } else {
+      const inList = taskFor(it.key);
+      const add = el("button", "btn", inList ? "✓ On list" : "+ "); add.type = "button"; add.disabled = !!inList;
+      if (!inList) add.append(el("span", "lbl", "Today"));
+      add.setAttribute("aria-label", inList ? "Already on your task list" : "Add to today"); add.onclick = () => addFromItem(it);
+      const ok = el("button", "btn", "✓ "); ok.type = "button"; ok.append(el("span", "lbl", "Done")); ok.setAttribute("aria-label", "Clear from inbox"); ok.onclick = () => markItem(it, true);
+      act.append(add, ok);
+    }
+    li.append(act);
+    return li;
+  }
+  const listOf = (rows) => { const ul = el("ul", "list"); rows.forEach((r) => ul.append(r)); return ul; };
+  const empty = (text) => el("div", "empty", text);
+
+  /* ---------- views ---------- */
+  function viewToday(v) {
+    const tasks = todayTasks(), top = tasks.filter((t) => t.top), rest = tasks.filter((t) => !t.top);
+    const doneToday = (S.tasks || []).filter((t) => t.done && t.doneAt && dayOf(t.doneAt) === today()).sort((a, b) => b.doneAt - a.doneAt);
+    const total = tasks.length + doneToday.length;
+    if (total) {
+      const p = el("div", "progress"); const bar = el("div", "bar"), i = el("i"); i.style.width = Math.round((doneToday.length / total) * 100) + "%"; bar.append(i);
+      p.append(bar, el("span", null, `${doneToday.length} of ${total} done`)); v.append(p);
+    }
+    const s1 = section("Top priorities", "Star up to 3"); s1.append(top.length ? listOf(top.map(taskRow)) : empty("Tap ☆ on a task to make it one of today's top 3.")); v.append(s1);
+    const s2 = section("Also today"); s2.append(rest.length ? listOf(rest.map(taskRow)) : empty(tasks.length ? "That's everything." : "Nothing else planned. Add a task above, or pull one in from your inbox.")); v.append(s2);
+
+    const onList = new Set(openTasks().map((t) => t.ref).filter(Boolean));
+    const sugg = inboxOpen().filter((i) => !i.low && !onList.has(i.key) && (i.waiting || RANK[i.urgency] <= 1)).slice(0, 4);
+    if (sugg.length) {
+      const go = el("button", "linkbtn", "See inbox →"); go.type = "button"; go.onclick = () => setTab("inbox");
+      const s3 = section("Needs you from the inbox", null, go); s3.append(listOf(sugg.map((i) => itemRow(i)))); v.append(s3);
+    }
+    if (doneToday.length) {
+      const d = el("details", "more"); d.append(el("summary", null, `Completed today (${doneToday.length})`), listOf(doneToday.map(taskRow))); v.append(d);
+    }
+  }
+  function viewInbox(v) {
+    const open = inboxOpen(), main = open.filter((i) => !i.low), low = open.filter((i) => i.low);
+    const counts = { all: main.length, waiting: open.filter((i) => i.waiting).length, email: main.filter((i) => srcKind(i) === "email").length, slack: main.filter((i) => i.source === "slack").length, monday: main.filter((i) => srcKind(i) === "monday").length };
+    const chips = el("div", "chips");
+    [["all", "All"], ["waiting", "Waiting on your reply"], ["email", "Email"], ["slack", "Slack"], ["monday", "Monday"]].forEach(([k, label]) => {
+      const b = el("button", null, `${label} ${counts[k]}`); b.type = "button"; b.setAttribute("aria-pressed", String(inboxFilter === k)); b.onclick = () => { inboxFilter = k; render(); }; chips.append(b);
+    });
+    v.append(chips);
+    const q = el("input", "search"); q.type = "search"; q.placeholder = "Search inbox"; q.value = inboxQuery; q.setAttribute("aria-label", "Search inbox");
+    q.oninput = () => { inboxQuery = q.value; const pos = q.selectionStart; render(); const n = document.querySelector(".search"); if (n) { n.focus(); n.setSelectionRange(pos, pos); } };
+    v.append(q);
+    const match = (i) => {
+      if (inboxFilter === "waiting" ? !i.waiting : inboxFilter !== "all" && srcKind(i) !== inboxFilter) return false;
+      const s = inboxQuery.trim().toLowerCase(); return !s || `${i.title} ${i.subject} ${i.from} ${where(i)} ${i.preview}`.toLowerCase().includes(s);
+    };
+    const rows = (inboxFilter === "waiting" ? open : main).filter(match);
+    v.append(rows.length ? listOf(rows.map((i) => itemRow(i))) : empty(inboxQuery ? "Nothing matches that search." : "Inbox zero here. Nice."));
+    const lowRows = low.filter(match);
+    if (lowRows.length && inboxFilter !== "waiting") {
+      const d = el("details", "more"); d.open = showLow; d.ontoggle = () => { showLow = d.open; };
+      d.append(el("summary", null, `Low priority and newsletters (${lowRows.length})`), listOf(lowRows.map((i) => itemRow(i)))); v.append(d);
+    }
+  }
+  function viewUpcoming(v) {
+    const later = openTasks().filter((t) => t.day > today()).sort((a, b) => a.day.localeCompare(b.day) || a.createdAt - b.createdAt);
+    const someday = openTasks().filter((t) => !t.day).sort((a, b) => a.createdAt - b.createdAt);
+    const days = [...new Set(later.map((t) => t.day))];
+    if (!days.length) { const s = section("Tomorrow"); s.append(empty("Nothing planned yet. Add a task above and choose Tomorrow.")); v.append(s); }
+    days.forEach((d) => { const s = section(niceDay(d)); s.append(listOf(later.filter((t) => t.day === d).map(taskRow))); v.append(s); });
+    const mon = inboxOpen().filter((i) => i.source === "monday" && i.kind === "task" && i.due && i.due > today()).sort((a, b) => a.due.localeCompare(b.due));
+    if (mon.length) { const s = section("Monday tasks with due dates"); s.append(listOf(mon.map((i) => { const r = itemRow(i); r.querySelector(".meta").prepend(el("span", "tag", "Due " + niceDay(i.due))); return r; }))); v.append(s); }
+    const s2 = section("Someday", "No date yet"); s2.append(someday.length ? listOf(someday.map(taskRow)) : empty("Ideas and not-urgent things go here.")); v.append(s2);
+  }
+  function viewDone(v) {
+    const cut = Date.now() - 7 * DAY;
+    const rows = [
+      ...(S.tasks || []).filter((t) => t.done && t.doneAt > cut).map((t) => ({ at: t.doneAt, row: () => taskRow(t) })),
+      ...Object.entries(S.handled || {}).filter(([k, at]) => at > cut && BYKEY[k] && !(S.tasks || []).some((t) => t.ref === k && t.done)).map(([k, at]) => ({ at, row: () => itemRow(BYKEY[k], { done: true }) }))
+    ].sort((a, b) => b.at - a.at);
+    if (!rows.length) { v.append(empty("Things you finish in the last 7 days show up here.")); return; }
+    const byDay = {}; rows.forEach((r) => (byDay[dayOf(r.at)] ||= []).push(r));
+    Object.keys(byDay).sort().reverse().forEach((d) => { const s = section(niceDay(d), `${byDay[d].length} done`); s.append(listOf(byDay[d].map((r) => r.row()))); v.append(s); });
+  }
+
   function render() {
-    ITEMS = merged();
-    const open = ITEMS.filter((i) => !isDone(i.key) && !i.muted);
-    const n = (f) => open.filter(inScope).filter(f).length;
-    $("kCrit").textContent = n((i) => i.urgency === "critical");
-    $("kHigh").textContent = n((i) => i.urgency === "high");
-    $("kReply").textContent = n((i) => i.replyNeeded);
-    $("kMon").textContent = n((i) => i.dueDate && i.dueDate < todayStr());
-    document.querySelectorAll(".tile").forEach((t) => t.setAttribute("aria-pressed", String(S.tile === t.dataset.tile)));
-    renderHeader(); renderSources(); renderBlocks(); renderList(); renderDetail(); renderPlanner();
+    if (!S) return;
+    buildItems();
+    const h = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: tz() }).format(new Date()));
+    $("greet").textContent = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+    $("dateLine").textContent = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: tz() });
+    const hl = S.triage && S.triage.headline && S.triageAt && dayOf(S.triageAt) === today() ? S.triage.headline : "";
+    $("headline").hidden = !hl; if (hl) { $("headline").innerHTML = ""; $("headline").append(el("b", null, "Today's focus: "), document.createTextNode(hl)); }
+    $("cToday").textContent = todayTasks().length;
+    $("cInbox").textContent = inboxOpen().filter((i) => !i.low).length;
+    const bad = (S.sources || []).filter((s) => s.state === "err").length;
+    $("syncDot").className = "dot" + (bad ? " warn" : "");
+    $("syncTxt").textContent = S.refreshing ? "Updating…" : S.fetchedAt ? "Updated " + clock(S.fetchedAt) : "Not synced yet";
+    document.querySelectorAll("nav.tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
+    const v = $("view"), y = window.scrollY; v.innerHTML = "";
+    ({ today: viewToday, inbox: viewInbox, upcoming: viewUpcoming, done: viewDone })[tab](v);
+    window.scrollTo(0, y);
   }
+  function setTab(t) {
+    tab = t; store.set("tab", t);
+    $("addDay").value = t === "upcoming" ? "tomorrow" : "today";
+    render(); window.scrollTo(0, 0);
+  }
+  document.querySelectorAll("nav.tabs button").forEach((b) => (b.onclick = () => setTab(b.dataset.tab)));
 
-  function renderHeader() {
-    const open = ITEMS.filter((i) => !isDone(i.key) && !i.muted);
-    const h = new Date().getHours();
-    $("today").textContent = new Date().toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
-    const c = open.filter((i) => i.urgency === "critical").length, hi = open.filter((i) => i.urgency === "high").length;
-    const greet = h < 12 ? "Good morning, Mark." : h < 17 ? "Good afternoon, Mark." : "Good evening, Mark.";
-    if (S.loading && !open.length) { $("headline").textContent = greet; $("subline").textContent = "Pulling Zoho Mail, Slack and Monday.com…"; }
-    else {
-      $("headline").textContent = c ? `${greet} ${c} thing${c > 1 ? "s" : ""} need${c > 1 ? "" : "s"} you now.` : hi ? `${greet} ${hi} item${hi > 1 ? "s" : ""} for today, nothing on fire.` : `${greet} You're clear.`;
-      $("subline").textContent = S.triage && S.triage.headline ? S.triage.headline : S.example ? "These are example items. Open the page on claude.ai to see your own." : S.planning ? "Claude is ranking everything and writing your plans…" : "Ranked by keywords for now. Press Re-plan my day for Claude's priorities and step-by-step plans.";
-    }
-    $("inboxCount").textContent = open.length; $("inboxCount").hidden = !open.length;
-    const last = Math.max(S.mailAt, S.slackAt, S.mon.at);
-    $("pulse").className = "pulse" + (S.loading || S.planning ? " busy" : "");
-    $("syncTxt").textContent = S.planning ? "Claude is planning…" : last ? `Synced ${ago(last)} · next in ${Math.max(0, Math.round((last + (S.refreshMin || 60) * 60000 - Date.now()) / 60000))} min` : "Syncing…";
-  }
+  /* ---------- add ---------- */
+  $("addForm").onsubmit = (e) => {
+    e.preventDefault();
+    const text = $("addText").value.trim(); if (!text) return $("addText").focus();
+    const when = $("addDay").value, day = when === "today" ? today() : when === "tomorrow" ? tomorrow() : "";
+    saveTask(newId(), { text, day }); $("addText").value = "";
+    if (tab === "done" || tab === "inbox") toast(`Added to ${niceDay(day)}`);
+  };
 
-  function pickConn(f) {
-    S.conn = f && S.conn && S.conn.kind === f.kind && S.conn.value === f.value ? null : f; S.scope = null; S.src = "all"; S.tile = null; S.selected = null;
-    document.querySelectorAll(".seg button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.src === "all")));
-    $("conn").classList.remove("open"); $("connToggle").setAttribute("aria-expanded", "false");
-    if (S.view !== "inbox") setView("inbox");
-    render();
-    const key = S.conn ? `${S.conn.kind}:${S.conn.value}` : "all", b = [...document.querySelectorAll("#sources .src")].find((x) => x.dataset.conn === key); b && b.focus();
+  /* ---------- sheet ---------- */
+  let lastFocus = null;
+  function openSheet(build) {
+    lastFocus = document.activeElement;
+    const sh = $("sheet"); sh.innerHTML = "";
+    const x = el("button", "close", "×"); x.type = "button"; x.setAttribute("aria-label", "Close"); x.onclick = closeSheet; sh.append(x);
+    build(sh);
+    $("scrim").classList.add("open"); sh.classList.add("open");
+    (sh.querySelector("[autofocus]") || x).focus();
   }
-  function renderSources() {
-    const box = $("sources"), notes = [], all = S.serverSources || [];
-    const hadFocus = box.contains(document.activeElement) ? document.activeElement.dataset.conn : null;
-    box.replaceChildren();
-    const open = ITEMS.filter((i) => !isDone(i.key) && !i.muted);
-    if (all.length) {
-      const b = el("button", "src all"); b.type = "button"; b.dataset.conn = "all"; b.setAttribute("aria-pressed", String(!S.conn));
-      const ic = el("span", "ic all", "∗"); ic.setAttribute("aria-hidden", "true");
-      const info = el("span", "info"); info.append(el("span", "name", "All connections"), el("span", "txt", `${open.length} to review`));
-      b.append(ic, info, el("span")); b.onclick = () => pickConn(null); box.append(b);
-    }
-    for (const s of all) {
-      const on = !!(S.conn && s.filter && S.conn.kind === s.filter.kind && S.conn.value === s.filter.value);
-      const p = el("button", "src"); p.type = "button"; p.title = [s.label, s.title].filter(Boolean).join(": "); p.disabled = !s.filter; p.setAttribute("aria-pressed", String(on));
-      if (s.filter) { p.dataset.conn = `${s.filter.kind}:${s.filter.value}`; p.onclick = () => pickConn(s.filter); }
-      const k = SRC[s.icon] ? s.icon : "email", count = s.filter ? open.filter((i) => connMatch(i, s.filter)).length : 0;
-      const ic = el("span", "ic " + SRC[k].cls, SRC[k].letter); ic.setAttribute("aria-hidden", "true");
-      const info = el("span", "info"); info.append(el("span", "name", s.label.replace(/^(Slack|Monday) · /, "")), el("span", "txt", s.state === "ok" ? `${count} to review` : s.txt));
-      p.append(ic, info, el("span", "dot " + s.state)); box.append(p);
-      if (s.note) notes.push(`${s.label}: ${s.note}`);
-    }
-    const bad = all.filter((s) => s.state !== "ok").length, picked = S.conn && all.find((s) => s.filter && s.filter.kind === S.conn.kind && s.filter.value === S.conn.value);
-    $("connSummary").textContent = picked ? picked.label.replace(/^(Slack|Monday) · /, "") : !all.length ? (S.loading ? "Connecting…" : "None set up") : bad ? `${bad} need${bad === 1 ? "s" : ""} attention` : `${all.length} connected`;
-    $("connDot").className = "dot" + (all.some((s) => s.state === "err") ? " err" : bad || !all.length ? " warn" : "");
-    if (!all.length) { const p = el("span", "src empty"); p.append(el("span", "txt", S.loading ? "Connecting to your accounts…" : "No sources set up yet")); box.append(p); }
-    const ul = $("srcNotes"); ul.replaceChildren(...notes.map((t) => el("li", null, t))); ul.hidden = !notes.length;
-    if (hadFocus) { const b = [...box.querySelectorAll(".src")].find((x) => x.dataset.conn === hadFocus); b && b.focus(); }
-  }
+  function closeSheet() { $("scrim").classList.remove("open"); $("sheet").classList.remove("open"); if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+  $("scrim").onclick = closeSheet;
 
-  function renderFilters() {
-    const sel = $("scopeFilter"), pool = ITEMS.filter((i) => !isDone(i.key) && !i.muted && (!S.conn || connMatch(i, S.conn)));
-    const tally = (list) => { const m = new Map(); list.filter(Boolean).forEach((v) => m.set(v, (m.get(v) || 0) + 1)); return [...m].sort((a, b) => a[0].localeCompare(b[0])); };
-    const groups = [["Clients", "client", tally(pool.map((i) => i.client))], ["Slack channels", "channel", tally(pool.filter((i) => i.source === "slack").map((i) => i.channel))], ["Monday boards", "board", tally(pool.filter((i) => i.source === "monday").map((i) => i.board))]];
-    const values = groups.flatMap(([, k, rows]) => rows.map(([v]) => `${k}:${v}`));
-    if (S.scope && !values.includes(S.scope)) S.scope = null;
-    if (document.activeElement !== sel) {
-      sel.replaceChildren(new Option("All clients and channels", ""));
-      for (const [label, k, rows] of groups) { if (!rows.length) continue; const g = document.createElement("optgroup"); g.label = label;
-        rows.forEach(([v, c]) => g.append(new Option(`${k === "channel" ? "#" : ""}${v} (${c})`, `${k}:${v}`))); sel.append(g); }
-      sel.value = S.scope || "";
-    }
-    const box = $("activeFilters"); box.replaceChildren();
-    const chip = (text, clear) => { const b = el("button", "fchip"); b.type = "button"; b.setAttribute("aria-label", `Remove filter: ${text}`); b.append(document.createTextNode(text), el("span", null, "×")); b.onclick = () => { clear(); S.selected = null; render(); }; box.append(b); };
-    if (S.conn) chip(S.conn.value, () => { S.conn = null; S.scope = null; });
-    if (S.scope) chip(S.scope.slice(S.scope.indexOf(":") + 1), () => { S.scope = null; });
-    if (S.tile) chip({ critical: "Do now", high: "Today", reply: "Waiting on your reply", overdue: "Overdue" }[S.tile], () => { S.tile = null; });
-    if (box.children.length > 1) { const c = el("button", "fclear", "Clear all"); c.type = "button"; c.onclick = () => { S.conn = null; S.scope = null; S.tile = null; S.selected = null; render(); }; box.append(c); }
-    box.hidden = !box.children.length;
-    const muted = ITEMS.filter((i) => i.muted && !isDone(i.key) && inScope(i)).length;
-    $("showMutedWrap").hidden = !muted; $("mutedCount").textContent = `Show ${muted} hidden email${muted === 1 ? "" : "s"}`;
-  }
-
-  function renderBlocks() {
-    const box = $("blocks"); box.replaceChildren();
-    const byKey = Object.fromEntries(ITEMS.map((i) => [i.key, i]));
-    let plan = S.triage && Array.isArray(S.triage.dayPlan) && S.triage.dayPlan.length ? S.triage.dayPlan : null;
-    if (!plan) {
-      const open = ITEMS.filter((i) => !isDone(i.key) && !i.muted);
-      plan = [
-        { slot: "Now", focus: "Clear the Do now list", ids: open.filter((i) => i.urgency === "critical").slice(0, 4).map((i) => i.key) },
-        { slot: "Next 2 hours", focus: "Reply to people waiting on you", ids: open.filter((i) => i.replyNeeded && i.urgency === "high").slice(0, 4).map((i) => i.key) },
-        { slot: "Afternoon", focus: "Review Monday tasks and unblock the team", ids: open.filter((i) => i.kind === "task" && (i.urgency === "high" || i.urgency === "critical")).slice(0, 4).map((i) => i.key) },
-        { slot: "End of day", focus: "Skim FYI, plan tomorrow", ids: [] }
-      ];
-      $("planMeta").textContent = S.example ? "Example" : "Suggested. Re-plan for Claude's timed plan.";
-    } else $("planMeta").textContent = `Planned by Claude · ${fmtTime(S.triageAt)}`;
-    plan.forEach((p, idx) => {
-      const b = el("div", "block" + (idx === 0 ? " now" : ""));
-      b.append(el("span", "slot", p.slot || ""), el("span", "what", p.focus || ""));
-      const refs = (p.ids || []).map((k) => byKey[k] && byKey[k].title).filter(Boolean);
-      if (refs.length) b.append(el("span", "refs", refs.join(" · ")));
-      box.append(b);
+  function openTask(t) {
+    openSheet((sh) => {
+      const title = el("h3", null, "Edit task"); title.id = "sheetTitle"; sh.append(title);
+      const lt = el("label", null, "Task"); lt.htmlFor = "tText"; const ta = el("textarea"); ta.id = "tText"; ta.value = t.text; ta.rows = 2; ta.maxLength = 300; ta.setAttribute("autofocus", ""); sh.append(lt, ta);
+      sh.append(el("label", null, "When"));
+      let day = t.day; const seg = el("div", "seg"), date = el("input"); date.type = "date"; date.value = t.day || ""; date.style.maxWidth = "180px"; date.setAttribute("aria-label", "Pick a date");
+      const opts = [["Today", today()], ["Tomorrow", tomorrow()], ["Next week", addDays(today(), 7)], ["Someday", ""]];
+      const paint = () => seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.d === (day && day < today() ? today() : day))));
+      opts.forEach(([l, d]) => { const b = el("button", null, l); b.type = "button"; b.dataset.d = d; b.onclick = () => { day = d; date.value = d; paint(); }; seg.append(b); });
+      date.onchange = () => { day = date.value || ""; paint(); };
+      seg.append(date); paint(); sh.append(seg);
+      let top = !!t.top; const star = el("button", "btn", ""); star.type = "button";
+      const paintStar = () => { star.textContent = top ? "★ Top priority" : "☆ Make top priority"; star.setAttribute("aria-pressed", String(top)); };
+      star.onclick = () => { top = !top; paintStar(); }; paintStar();
+      const sw = el("div", "actions"); sw.style.marginTop = "12px"; sw.append(star); sh.append(sw);
+      const ln = el("label", null, "Notes"); ln.htmlFor = "tNote"; const note = el("textarea"); note.id = "tNote"; note.value = t.note || ""; note.placeholder = "Details, links, next step…"; note.maxLength = 2000; sh.append(ln, note);
+      const it = t.ref && BYKEY[t.ref];
+      const a = el("div", "actions");
+      const del = el("button", "btn danger", "Delete"); del.type = "button"; del.onclick = () => { closeSheet(); removeTask(t.id); }; a.append(del);
+      if (it) { const o = el("button", "btn", "Open message"); o.type = "button"; o.onclick = () => openItem(it); a.append(o); }
+      a.append(el("span", "spacer"));
+      const save = el("button", "btn primary", "Save"); save.type = "button";
+      save.onclick = () => { const text = ta.value.trim(); if (!text) return ta.focus(); closeSheet(); saveTask(t.id, { text, day, top, note: note.value.trim() }); };
+      a.append(save); sh.append(a);
+      ta.onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); save.click(); } };
     });
   }
 
-  function renderList() {
-    const list = $("list"); list.replaceChildren();
-    renderFilters();
-    const vis = visible(ITEMS);
-    $("listCount").textContent = `${vis.length} item${vis.length === 1 ? "" : "s"}${S.tile || S.src !== "all" || S.q || S.conn || S.scope ? " · filtered" : ""}`;
-    if (S.selected && !ITEMS.some((i) => i.key === S.selected)) S.selected = null;
-    if (!S.selected && wide()) { const first = navOrder()[0]; if (first) S.selected = first.key; }
-    if (!vis.length) {
-      const e = el("div", "list-empty"), filtered = S.tile || S.q || S.src !== "all" || S.conn || S.scope;
-      e.append(el("b", null, S.loading ? "Loading your inbox…" : filtered ? "Nothing matches" : "Inbox zero"),
-        document.createTextNode(S.loading ? "Mail, Slack and Monday arrive in a few seconds." : filtered ? "Clear the search or filters to see everything." : "Nothing is waiting on you."));
-      list.append(e); return;
-    }
-    for (const g of GROUPS) {
-      const rows = vis.filter((i) => g.match(i.urgency));
-      if (!rows.length) continue;
-      const collapsed = isCollapsed(g.id);
-      const h = el("button", "group-h"); h.type = "button"; h.setAttribute("aria-expanded", String(!collapsed));
-      if (g.id === "now" || g.id === "today") h.append(el("span", "sevbar " + (g.id === "now" ? "critical" : "high")));
-      h.append(document.createTextNode(g.title + " "), el("span", "cnt", String(rows.length)));
-      const chev = el("span", "chev", "▾"); chev.setAttribute("aria-hidden", "true"); h.append(chev);
-      h.onclick = () => { S.collapsed[g.id] = !collapsed; renderList(); };
-      list.append(h);
-      if (collapsed) continue;
-      for (const it of rows) {
-        const r = el("button", "row" + (it.unread ? " unread" : "") + (isDone(it.key) ? " done" : ""));
-        r.type = "button"; r.setAttribute("role", "option"); r.dataset.key = it.key; r.setAttribute("aria-selected", String(it.key === S.selected));
-        const ic = el("span", "ic " + SRC[it.mondayMail ? "monday" : it.source].cls, SRC[it.mondayMail ? "monday" : it.source].letter); ic.setAttribute("aria-hidden", "true");
-        const sub = it.mondayMail ? `${it.monAcct} · ${it.from} · via email` : it.source === "email" ? it.from : it.source === "slack" ? `#${it.channel} · ${it.from}` : it.kind === "task" ? [it.client, it.status].filter(Boolean).join(" · ") : `${it.board} · ${it.from}`;
-        const dueNow = dueInfo(it.dueDate), when = dueNow ? dueNow.short : it.waiting && waitAge(it) !== "today" ? "no reply " + waitAge(it) : fmtTime(it.time), late = (!!dueNow && dueNow.cls === "late") || (!dueNow && it.waiting && waitAge(it) !== "today");
-        r.append(ic, el("span", "t", it.title), el("span", "when" + (late ? " late" : ""), when), el("span", "sub", sub));
-        r.onclick = () => select(it.key, true);
-        list.append(r);
+  function openItem(it) {
+    openSheet((sh) => {
+      const title = el("h3", null, it.title); title.id = "sheetTitle"; sh.append(title);
+      sh.append(el("p", "sub", [it.from, where(it), new Date(it.time).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: tz() })].filter(Boolean).join(" · ")));
+      const meta = el("div", "meta"); itemTags(it, meta); if (meta.childNodes.length) { meta.style.margin = "0 0 12px"; sh.append(meta); }
+      if (it.why || it.plan.length) {
+        const w = el("div", "why"); if (it.why) w.append(document.createTextNode(it.why));
+        if (it.plan.length) { const ol = el("ol"); it.plan.forEach((p) => ol.append(el("li", null, p))); w.append(ol); }
+        sh.append(w);
       }
-    }
-  }
-
-  function select(key, fromClick) {
-    if (S.selected !== key) S.confirmFor = null;
-    S.selected = key;
-    document.querySelectorAll(".row").forEach((r) => r.setAttribute("aria-selected", String(r.dataset.key === key)));
-    renderDetail();
-    if (fromClick && !wide()) { $("split").classList.add("show-detail"); $("split").scrollIntoView({ block: "start" }); }
-  }
-
-  function renderDetail() {
-    const box = $("detail");
-    const it = ITEMS.find((i) => i.key === S.selected);
-    const same = box.dataset.key === S.selected;
-    const keepText = same && $("dText") ? $("dText").value : null, keepAsk = same && $("dAsk") ? $("dAsk").value : null;
-    const focusId = same && document.activeElement && ["dText", "dAsk"].includes(document.activeElement.id) ? document.activeElement.id : null;
-    box.replaceChildren(); box.dataset.key = it ? it.key : "";
-    if (!it) {
-      const e = el("div", "d-empty"), inner = el("div");
-      inner.append(el("b", null, S.loading ? "Loading…" : "Pick an item"), document.createTextNode("Its plan and a reply box open here."));
-      const hint = el("div", "hint");
-      [["J", " / ", "K", " move"], ["R", " reply"], ["E", " mark handled"], ["/", " search"]].forEach((parts) => { const s = el("span"); parts.forEach((p, i) => s.append(i % 2 === 0 ? el("span", "kbd", p) : document.createTextNode(p))); hint.append(s); });
-      inner.append(hint); e.append(inner); box.append(e); return;
-    }
-    const sc = el("div", "detail-scroll");
-    const back = el("button", "btn ghost back", "← All items"); back.type = "button"; back.onclick = () => $("split").classList.remove("show-detail"); sc.append(back);
-
-    const top = el("div", "d-top"), chips = el("div", "chips");
-    chips.append(el("span", "chip " + it.urgency, `${LABEL[it.urgency]} priority`));
-    const dueD = dueInfo(it.dueDate); if (dueD) chips.append(el("span", "chip due " + dueD.cls, dueD.text));
-    if (it.priority) chips.append(el("span", "chip", `Monday priority: ${it.priority}`));
-    if (it.muted) chips.append(el("span", "chip", "Hidden from inbox"));
-    chips.append(el("span", "chip", it.mondayMail ? "Monday notification (email)" : it.source === "email" ? "Email" : it.source === "slack" ? "Slack" : it.kind === "task" ? "Monday task" : "Monday discussion"));
-    if (it.client) chips.append(el("span", "chip", it.client));
-    if (it.kind === "task" && it.status) chips.append(el("span", "chip", it.status));
-    if (it.waiting && !isDone(it.key)) chips.append(el("span", "chip", `Waiting on your reply · ${waitAge(it)}`));
-    if (isDone(it.key)) chips.append(el("span", "chip", "Handled"));
-    top.append(chips, el("h2", null, it.title));
-    const meta = el("div", "d-meta");
-    if (it.source === "email") meta.append(el("span", null, `From ${it.from}${it.fromAddr && it.fromAddr !== it.from ? " · " + it.fromAddr : ""}`), el("span", null, `To ${it.account ? it.account.email : ""}`));
-    else if (it.source === "slack") meta.append(el("span", null, `${it.from} in #${it.channel}`));
-    else meta.append(el("span", null, it.kind === "task" ? `Assigned to ${it.from}` : `Latest from ${it.from}`), el("span", null, it.board));
-    if (it.dueNote) meta.append(el("span", null, it.dueNote));
-    meta.append(el("span", null, fmtTime(it.time)));
-    if (it.link) { const a = el("a", null, it.mondayMail ? (it.mondayLink ? "Open in Monday ↗" : `Open ${it.monAcct} in Monday ↗`) : it.source === "monday" ? "Open in Monday ↗" : "Open in Slack ↗"); a.href = it.link; a.target = "_blank"; a.rel = "noopener"; meta.append(a); }
-    top.append(meta); sc.append(top);
-
-    if (it.why) { const w = el("div", "why"); w.append(el("b", null, "Why it matters"), document.createTextNode(it.why)); sc.append(w); }
-
-    const planSec = el("section"), pt = el("h3", "sec-title");
-    pt.append(document.createTextNode("Plan"), el("span", null, it.ai ? "by Claude · tick steps as you go" : ""));
-    planSec.append(pt);
-    if (it.plan.length) {
-      const ul = el("ul", "steps"), done = ticks[it.key] || [];
-      it.plan.forEach((s, i) => {
-        const li = el("li"), lab = el("label"), cb = el("input"); cb.type = "checkbox"; cb.id = `step-${i}`; cb.checked = done.includes(i);
-        cb.onchange = () => { const d = new Set(ticks[it.key] || []); cb.checked ? d.add(i) : d.delete(i); ticks[it.key] = [...d]; store.set("ticks", ticks); api("/api/ticks", { key: it.key, steps: [...d] }).catch(() => {});
-          if (d.size === it.plan.length && !isDone(it.key)) { setDone(it.key, true); toast("All steps done. Marked as handled."); render(); } };
-        lab.htmlFor = cb.id; lab.append(cb, el("span", null, s)); li.append(lab); ul.append(li);
-      });
-      planSec.append(ul);
-    } else planSec.append(el("div", "no-plan", S.sample ? (S.planning ? "Claude is writing the plan…" : "No plan yet. Press Re-plan my day and Claude will write the steps.") : "Plans need Claude, which isn't available in this view."));
-    sc.append(planSec);
-
-    const det = el("details", "orig"); det.open = !it.plan.length;
-    det.append(el("summary", null, it.kind === "update" ? `Discussion · ${(it.replies || 0) + 1} message${it.replies ? "s" : ""}` : it.kind === "task" ? "Task details" : "Original message"));
-    det.append(el("div", "body", it.source === "email" ? `${it.subject}\n\n${it.preview || "(no preview)"}` : it.preview || it.subject));
-    sc.append(det);
-
-    const actions = el("div", "chips");
-    if (it.link) { const where = it.mondayMail || it.source === "monday" ? "Monday" : "Slack", o = el("a", "btn task-open", "Open task ↗"); o.href = it.link; o.target = "_blank"; o.rel = "noopener"; o.title = `Open in ${where}`; o.setAttribute("aria-label", `Open task in ${where}`); actions.append(o); }
-    const doneBtn = el("button", "btn", isDone(it.key) ? "Mark as not handled" : "✓ Mark as handled"); doneBtn.type = "button"; doneBtn.title = "Shortcut: E";
-    doneBtn.onclick = () => toggleDone(it); actions.append(doneBtn); sc.append(actions);
-    box.append(sc);
-
-    /* composer */
-    const comp = el("div", "composer"), to = el("div", "to"), toL = el("span");
-    toL.append(document.createTextNode(it.source === "email" ? "Reply to " : it.source === "slack" ? "Reply in thread · #" : it.kind === "update" ? "Reply in Monday thread · " : "Post an update on this task · "),
-      el("b", null, it.source === "email" ? (it.fromAddr || it.from) : it.source === "slack" ? it.channel : it.board));
-    to.append(toL, el("span", null, it.mondayMail ? "Replying here emails Monday's notification address. To answer in the thread, use Open in Monday." : "Ctrl/⌘ + Enter to send"));
-    comp.append(to);
-    if (S.sample) {
-      const ask = el("div", "ask"), ai = el("input"); ai.id = "dAsk"; ai.type = "text"; ai.placeholder = "Tell Claude what to say, e.g. “confirm we'll fix it by 3pm”"; ai.setAttribute("aria-label", "Instruction for Claude");
-      const db = el("button", "btn", "✦ Draft"); db.type = "button"; db.id = "dDraft"; db.title = "Draft a reply with Claude";
-      db.onclick = () => draft(it); ai.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); draft(it); } };
-      if (keepAsk != null) ai.value = keepAsk;
-      ask.append(ai, db); comp.append(ask);
-    }
-    const ta = el("textarea"); ta.id = "dText"; ta.placeholder = it.source === "email" ? "Write your email reply…" : "Write your reply…"; ta.setAttribute("aria-label", "Reply text");
-    if (keepText != null) ta.value = keepText;
-    ta.onkeydown = (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); askSend(it); } };
-    comp.append(ta);
-    const row = el("div", "send-row"), st = el("span", "status"); st.id = "dStatus"; st.setAttribute("role", "status");
-    const sb = el("button", "btn primary", it.source === "email" ? "Send email" : it.source === "slack" ? "Send to Slack" : "Post to Monday"); sb.type = "button"; sb.id = "dSend"; sb.disabled = S.example || !S.mcp;
-    sb.onclick = () => askSend(it);
-    row.append(st, sb); comp.append(row);
-    if (S.example) st.textContent = "Sending works when this page is open on claude.ai.";
-    if (S.confirmFor === it.key) comp.append(confirmBox(it, false));
-    box.append(comp);
-    if (focusId && $(focusId)) $(focusId).focus();
-  }
-
-  function confirmBox(it, focus) {
-    const c = el("div", "confirm"); c.id = "dConfirm";
-    c.append(el("span", null, it.source === "email" ? `Send this from ${it.account ? it.account.email : "Zoho"} to ${it.fromAddr || it.from}?` : it.source === "slack" ? `Post this in the #${it.channel} thread?` : it.kind === "update" ? "Post this reply in the Monday thread?" : `Post this as an update on “${it.subject}”?`));
-    const y = el("button", "btn primary", "Yes, send"); y.type = "button"; y.id = "dYes"; y.onclick = () => send(it);
-    const n = el("button", "btn", "Cancel"); n.type = "button"; n.onclick = () => { S.confirmFor = null; c.remove(); };
-    c.append(y, n); if (focus) setTimeout(() => y.focus(), 0); return c;
-  }
-
-  function toggleDone(it) {
-    const now = !isDone(it.key);
-    if (now && !S.showDone) { const order = navOrder(), idx = order.findIndex((i) => i.key === it.key); const next = order[idx + 1] || order[idx - 1]; S.selected = next ? next.key : null; }
-    setDone(it.key, now); toast(now ? "Marked as handled" : "Moved back to your list"); render();
-  }
-
-  /* ---------- daily planner (Eat That Frog) ---------- */
-  const PRINCIPLES = [
-    ["Eat the frog first", "Do your hardest, most important task before anything else, before email and Slack."],
-    ["If you have two frogs, eat the ugliest one first", "Start with the biggest, hardest task. The rest of the day gets easier."],
-    ["Plan every day in advance", "Ten minutes of planning saves up to two hours of execution. Write tomorrow's list tonight."],
-    ["Apply the 80/20 rule", "A few of your tasks produce most of your results. Those are your A tasks."],
-    ["Consider the consequences", "The most important task is the one with the biggest long-term impact if you do or don't do it."],
-    ["Practise creative procrastination", "You can't do everything. Deliberately put off the low-value tasks."],
-    ["Use the ABCDE method", "Sort before you start: A must, B should, C nice, D delegate, E eliminate. Never do a B while an A is left."],
-    ["Focus on key result areas", "Know the few results you are responsible for, and spend your time there."],
-    ["The law of three", "Three tasks account for most of your value. Find them and give them most of your time."],
-    ["Prepare thoroughly before you begin", "Have everything you need to hand, so you can start and not stop."],
-    ["One step at a time", "You don't need to see the whole road. Just take the next clear step."],
-    ["Upgrade your key skills", "Getting better at your most important tasks makes the frog smaller every time."],
-    ["Identify your key constraint", "Find the one thing that most limits how fast you reach your goal, and work on that."],
-    ["Put the pressure on yourself", "Work as if you were leaving for a month tomorrow and had to finish the key tasks first."],
-    ["Work at your energy peak", "Do the frog when your energy is highest, usually first thing."],
-    ["Motivate yourself into action", "Starting is the hardest part. Begin and momentum follows."],
-    ["Technology is a terrible master", "Turn off notifications during your frog block. Check messages in batches."],
-    ["Slice and dice the task", "Break a big task into small slices and do just one to get going."],
-    ["Create large chunks of time", "Block 60 to 90 minutes with no interruptions for your most important work."],
-    ["Develop a sense of urgency", "Move fast on your key tasks. Do it now."],
-    ["Single-handle every task", "Once you start the frog, keep going until it's 100 percent done."]
-  ];
-  const LETTERS = ["A", "B", "C", "D", "E"];
-  const LETTER_INFO = { A: ["Must do", "Serious consequences if these don't get done today."], B: ["Should do", "Important, but only after your must-dos."], C: ["Could do", "Nice to finish if you have time."], D: ["Hand off", "Someone else can do these. Pass them on early."], E: ["Drop", "Not worth your time. Clear these out."] };
-
-  function setView(v, fromHash) {
-    S.view = v === "planner" ? "planner" : "inbox";
-    $("inboxView").hidden = S.view !== "inbox"; $("plannerView").hidden = S.view !== "planner";
-    document.querySelectorAll(".views button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.view === S.view)));
-    if (!fromHash) { try { history.replaceState(null, "", S.view === "planner" ? "#planner" : location.pathname); } catch {} }
-    renderPlanner();
-  }
-
-  async function planPatch(date, patch) {
-    const isToday = date === S.today;
-    const cur = isToday ? S.plan : S.planT;
-    if (cur) Object.assign(cur, patch);
-    renderPlanner();
-    try { const r = await api("/api/planner", { date, patch }); if (isToday) S.plan = r.doc; else S.planT = r.doc; S.streak = r.frogStreak; renderPlanner(); }
-    catch (e) { toast(e.message || "Couldn't save the planner"); }
-  }
-
-  function planItems() {
-    if (!S.plan) return [];
-    const abc = S.plan.abc || {};
-    const inbox = ITEMS.filter((i) => !isDone(i.key) && !i.muted).map((i) => ({ ...i, letter: (S.buckets[i.key] && S.buckets[i.key].L) || abc[i.key] || "N", own: false }));
-    const own = (S.plan.tasks || []).map((t) => ({ key: t.id, own: true, title: t.text, done: t.done, letter: abc[t.id] || t.abc || "B", delegateTo: t.delegateTo || "", dueDate: t.due || "", source: "own", time: 0, urgency: "normal" }));
-    const all = [...own, ...inbox];
-    const order = S.plan.order || {};
-    const pos = (it) => { const i = (order[it.letter] || []).indexOf(it.key); return i < 0 ? 1e6 : i; };
-    return all.sort((a, b) => LETTERS.indexOf(a.letter) - LETTERS.indexOf(b.letter) || pos(a) - pos(b) || (a.done - b.done) || (a.dueDate || "9999").localeCompare(b.dueDate || "9999") || b.time - a.time);
-  }
-
-  // Finished in the last 7 days: incoming items you marked handled and today's own tasks, newest first.
-  function doneItems() {
-    if (!S.plan) return [];
-    const cut = Date.now() - 7 * 864e5, abc = S.plan.abc || {};
-    const inbox = ITEMS.filter((i) => isDone(i.key) && Number(handled[i.key]) >= cut)
-      .map((i) => ({ ...i, own: false, done: true, doneAt: Number(handled[i.key]), letter: (S.buckets[i.key] && S.buckets[i.key].L) || abc[i.key] || "N" }));
-    const own = (S.plan.tasks || []).filter((t) => t.done).map((t) => ({ key: t.id, own: true, title: t.text, done: true, doneAt: t.doneAt || 0, letter: abc[t.id] || t.abc || "B", source: "own", time: 0 }));
-    return [...inbox, ...own].sort((a, b) => b.doneAt - a.doneAt);
-  }
-
-  function frogOf(items) {
-    const want = S.plan && S.plan.frog; // your choice only; otherwise the first open Must do
-    let f = want && items.find((i) => i.key === want);
-    if (!f && want && S.plan && S.plan.frogDone) f = { key: want, title: (S.plan.frogTitle || "Today's frog"), gone: true };
-    if (!f) f = items.find((i) => i.letter === "A" && !i.done);
-    return f || null;
-  }
-
-  function markTaskDone(it, done) {
-    if (it.own) planPatch(S.today, { tasks: (S.plan.tasks || []).map((t) => (t.id === it.key ? { ...t, done, doneAt: done ? Date.now() : 0 } : t)) });
-    else { setDone(it.key, done); render(); }
-  }
-
-  // Own tasks keep their bucket in today's plan; incoming tasks keep it on the server across days. "N" means back to Latest.
-  function setLetter(it, L) {
-    const abc = { ...(S.plan.abc || {}) };
-    if (it.own) { abc[it.key] = L === "N" ? "B" : L; planPatch(S.today, { abc }); return; }
-    if (L === "N") delete S.buckets[it.key]; else S.buckets[it.key] = { L, at: Date.now() };
-    if (it.key in abc) { delete abc[it.key]; planPatch(S.today, { abc }); } else renderPlanner();
-    api("/api/bucket", { key: it.key, letter: L === "N" ? null : L }).catch((e) => toast(e.message || "Couldn't save that move"));
-  }
-
-  function move(it, dir, items) {
-    const same = items.filter((i) => i.letter === it.letter).map((i) => i.key);
-    const i = same.indexOf(it.key), j = i + dir; if (j < 0 || j >= same.length) return;
-    [same[i], same[j]] = [same[j], same[i]];
-    planPatch(S.today, { order: { ...(S.plan.order || {}), [it.letter]: same } });
-  }
-
-  function openInInbox(key) { setView("inbox"); S.tile = null; S.conn = null; S.scope = null; S.q = ""; $("q").value = ""; S.src = "all"; S.selected = key; render(); select(key, true); }
-
-  function renderPlanner() {
-    const pill = $("frogPill");
-    if (!S.plan) { pill.hidden = true; return; }
-    const items = planItems(), frog = frogOf(items);
-    const eaten = !!(S.plan.frogDone || (frog && (frog.done || (!frog.own && !frog.gone && isDone(frog.key)))));
-    pill.hidden = !frog; pill.textContent = eaten ? "frog eaten" : "1 frog"; pill.className = "pill" + (eaten ? " done" : "");
-    if (S.view !== "planner") return;
-    renderSummary(items);
-
-    /* frog card */
-    const fc = $("frogCard"); fc.replaceChildren(); fc.className = "frog" + (eaten ? " eaten" : "");
-    if (!frog) {
-      fc.append(el("span", "eyebrow", "Today's frog"), el("h2", null, S.loading ? "Finding your top task…" : "No top task yet"),
-        el("p", "fwhy", "Put your most important task in Must do, or pick one with ⋯ → Make top task."));
-    } else {
-      fc.append(el("span", "eyebrow", eaten ? "Top task done 🐸" : "Your top task today 🐸"), el("h2", null, frog.title));
-      if (eaten) fc.append(el("p", "fwhy", `Done${S.plan.frogDoneAt ? " at " + new Date(S.plan.frogDoneAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}. The hardest part of your day is behind you. Move on to the next A task.`));
-      else {
-        if (frog.why) fc.append(el("p", "fwhy", frog.why));
-        const step = frog.plan && frog.plan[0];
-        if (step) { const f = el("div", "first"); f.append(el("b", null, "First step"), document.createTextNode(step)); fc.append(f); }
+      if (it.title !== it.subject) sh.append(el("p", "sub", it.subject));
+      sh.append(el("div", "msg", it.preview || "(no preview)"));
+      const a = el("div", "actions");
+      if (it.link) { const o = el("a", "btn", `Open in ${SRC_NAME[srcKind(it)]} ↗`); o.href = it.link; o.target = "_blank"; o.rel = "noopener"; a.append(o); }
+      const inList = taskFor(it.key);
+      if (!handled(it.key)) {
+        const add = el("button", "btn", inList ? "✓ On your list" : "+ Add to today"); add.type = "button"; add.disabled = !!inList; add.onclick = () => { addFromItem(it); closeSheet(); }; a.append(add);
+        if (!inList) { const t2 = el("button", "btn", "+ Tomorrow"); t2.type = "button"; t2.onclick = () => { addFromItem(it, tomorrow()); closeSheet(); }; a.append(t2); }
+        const ok = el("button", "btn", "✓ Done, clear it"); ok.type = "button"; ok.onclick = () => { closeSheet(); markItem(it, true); }; a.append(ok);
+      } else { const u = el("button", "btn", "Move back to inbox"); u.type = "button"; u.onclick = () => { closeSheet(); markItem(it, false); }; a.append(u); }
+      sh.append(a);
+      if (it.source === "monday" && it.kind === "task") return;
+      const lr = el("label", null, "Reply"); lr.htmlFor = "rText"; const ta = el("textarea"); ta.id = "rText"; ta.placeholder = it.mondayMail ? "Replies here go to Monday's notification address. Use Open in Monday to answer in the thread." : "Write a reply…";
+      ta.value = store.get("draft:" + it.key, ""); ta.oninput = () => store.set("draft:" + it.key, ta.value);
+      sh.append(lr, ta);
+      const ra = el("div", "actions");
+      if (S.claude) {
+        const d = el("button", "btn", "✨ Draft for me"); d.type = "button";
+        d.onclick = async () => { d.disabled = true; d.textContent = "Drafting…"; try { const r = await api("/api/draft", { key: it.key, instruction: "" }); ta.value = r.text; store.set("draft:" + it.key, r.text); } catch (e) { toast(e.message); } d.disabled = false; d.textContent = "✨ Draft for me"; };
+        ra.append(d);
       }
-      const acts = el("div", "acts");
-      if (!eaten) {
-        const go = el("button", "btn primary", "Start focusing"); go.type = "button"; go.onclick = () => startFocus(frog, 90); acts.append(go);
-        const ate = el("button", "btn", "✓ Mark done"); ate.type = "button";
-        ate.onclick = () => { planPatch(S.today, { frogDone: true, frog: frog.key, frogTitle: frog.title }); if (!frog.gone) markTaskDone(frog, true); toast("Top task done. Well done.", () => { planPatch(S.today, { frogDone: false }); if (!frog.gone) markTaskDone(frog, false); }); };
-        acts.append(ate);
-      } else {
-        const undo = el("button", "btn ghost", "Undo"); undo.type = "button";
-        undo.onclick = () => { planPatch(S.today, { frogDone: false }); if (!frog.gone) markTaskDone(frog, false); }; acts.append(undo);
-      }
-      if (!frog.own && !frog.gone) { const o = el("button", "btn ghost", "Open item"); o.type = "button"; o.onclick = () => openInInbox(frog.key); acts.append(o); }
-      const cands = items.filter((i) => (i.letter === "A" || i.letter === "B") && !i.done && i.key !== frog.key).slice(0, 25);
-      if (cands.length && !eaten) {
-        const sel = el("select"); sel.id = "frogPick"; sel.setAttribute("aria-label", "Choose a different top task");
-        sel.append(new Option("Choose a different task…", ""));
-        cands.forEach((c) => sel.append(new Option(`${c.letter} · ${c.title.slice(0, 70)}`, c.key)));
-        sel.onchange = () => sel.value && planPatch(S.today, { frog: sel.value, frogDone: false });
-        acts.append(sel);
-      }
-      fc.append(acts);
-    }
-
-    /* daily tip */
-    const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 864e5);
-    const [ph, pt] = PRINCIPLES[doy % PRINCIPLES.length];
-    $("rule").replaceChildren(el("summary", null, `Today's tip: ${ph}`), el("p", null, pt));
-    renderTimer();
-
-    /* today's list: one priority at a time */
-    const tabs = $("planTabs"), hadTab = tabs.contains(document.activeElement);
-    const openIn = (L) => items.filter((i) => i.letter === L && !i.done);
-    const aLeft = openIn("A").length;
-    $("abcMeta").textContent = aLeft ? `${aLeft} must-do task${aLeft === 1 ? "" : "s"} left` : "No must-dos left";
-    const finished = doneItems(), TABS = [...LETTERS, "DONE"];
-    if (!TABS.includes(S.planTab)) S.planTab = "A";
-    tabs.replaceChildren(...TABS.map((L) => { const on = S.planTab === L, b = el("button", "ptab " + L); b.type = "button"; b.id = "planTab-" + L; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(on)); b.setAttribute("aria-controls", "abcGrid"); b.tabIndex = on ? 0 : -1;
-      b.append(el("span", null, L === "DONE" ? "✓ Done" : LETTER_INFO[L][0]), el("span", "ptab-n", String(L === "DONE" ? finished.length : openIn(L).length)));
-      b.onclick = () => { S.planTab = L; S.openRow = null; renderPlanner(); $("planTab-" + L).focus(); };
-      b.onkeydown = (e) => { const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (!d) return; e.preventDefault(); S.planTab = TABS[(TABS.indexOf(L) + d + TABS.length) % TABS.length]; S.openRow = null; renderPlanner(); $("planTab-" + S.planTab).focus(); };
-      return b; }));
-    const grid = $("abcGrid"), L = S.planTab; grid.setAttribute("aria-labelledby", "planTab-" + L); grid.replaceChildren();
-    if (L === "DONE") {
-      const h = el("div", "tl-head"); h.append(el("p", null, "Finished in the last 7 days. Untick one to put it back.")); grid.append(h);
-      if (!finished.length) grid.append(el("div", "empty-grp", "Nothing finished yet. Tick a task when it's done and it moves here."));
-      finished.slice(0, 80).forEach((it) => grid.append(doneRow(it)));
-      renderLatest(items); renderTomorrow(items); return;
-    }
-    const rows = items.filter((i) => i.letter === L && !i.done);
-    const head = el("div", "tl-head"); head.append(el("p", null, LETTER_INFO[L][1]));
-    if (L === "E" && rows.some((r) => !r.done)) { const clr = el("button", "btn", "Drop all"); clr.type = "button"; clr.title = "Mark every item here as handled";
-      clr.onclick = () => { const inboxKeys = rows.filter((r) => !r.own).map((r) => r.key), ownE = new Set(rows.filter((r) => r.own).map((r) => r.key)); inboxKeys.forEach((k) => setDone(k, true));
-        if (ownE.size) planPatch(S.today, { tasks: S.plan.tasks.map((t) => (ownE.has(t.id) ? { ...t, done: true } : t)) }); render();
-        toast(`${rows.length} item${rows.length === 1 ? "" : "s"} dropped`, () => { inboxKeys.forEach((k) => setDone(k, false)); if (ownE.size) planPatch(S.today, { tasks: S.plan.tasks.map((t) => (ownE.has(t.id) ? { ...t, done: false } : t)) }); render(); }); };
-      head.append(clr); }
-    grid.append(head);
-    if (!rows.length) grid.append(el("div", "empty-grp", L === "A" ? "Nothing here yet. Add the one thing that would make today a success." : "Nothing here right now."));
-    rows.slice(0, 60).forEach((it) => grid.append(taskRow(it, items, frog)));
-    renderLatest(items);
-    renderTomorrow(items);
-  }
-
-  // Latest: incoming tasks you haven't sorted yet, newest first, each with one-tap buckets.
-  function renderLatest(items) {
-    const all = items.filter((i) => i.letter === "N"), waitingN = all.filter((i) => i.waiting).length;
-    if (!waitingN) S.latestWaiting = false;
-    const rows = (S.latestWaiting ? all.filter((i) => i.waiting) : all).sort((a, b) => b.time - a.time), list = $("latestList");
-    const fb = (label, on, v) => { const b = el("button", null, label); b.type = "button"; b.setAttribute("aria-pressed", String(on)); b.onclick = () => { S.latestWaiting = v; S.latestShow = 25; renderPlanner(); }; return b; };
-    $("latestFilter").hidden = !waitingN;
-    $("latestFilter").replaceChildren(fb(`All ${all.length}`, !S.latestWaiting, false), fb(`Waiting on your reply ${waitingN}`, S.latestWaiting, true));
-    const keep = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.sort;
-    $("latestN").textContent = String(all.length); $("latestN").className = "latest-n" + (all.length ? "" : " zero");
-    list.replaceChildren();
-    if (!rows.length) { list.append(el("div", "latest-empty", S.loading ? "Loading your tasks…" : "All sorted. New tasks will show up here.")); return; }
-    rows.slice(0, S.latestShow).forEach((it) => {
-      const r = el("div", "lrow");
-      const check = el("input", "task-check"); check.type = "checkbox"; check.setAttribute("aria-label", `Mark done: ${it.title}`);
-      check.onchange = () => { markTaskDone(it, true); toast("Marked done", () => markTaskDone(it, false)); };
-      const body = el("div", "task-body"); body.append(el("span", "tt", it.title));
-      const meta = el("div", "task-meta");
-      const due = dueInfo(it.dueDate); if (due) meta.append(el("span", "tag due " + due.cls, due.text));
-      const wt = waitTag(it); if (wt) meta.append(wt);
-      const src = it.mondayMail ? `Monday · ${it.from}` : it.source === "email" ? "Email · " + it.from : it.source === "slack" ? "Slack · " + it.from : it.kind === "task" ? `Monday · ${it.status || "Task"}` : "Monday · " + it.from;
-      meta.append(el("span", "task-from", src)); if (it.time) meta.append(el("span", null, fmtTime(it.time)));
-      body.append(meta);
-      const acts = el("div", "lrow-acts"), opener = openTaskControl(it); if (opener) acts.append(opener);
-      LETTERS.forEach((L) => { const b = el("button", "to-bucket", LETTER_INFO[L][0]); b.type = "button"; b.dataset.sort = it.key + "|" + L;
-        b.setAttribute("aria-label", `Move to ${LETTER_INFO[L][0]}: ${it.title}`);
-        b.onclick = () => { setLetter(it, L); toast(`Moved to ${LETTER_INFO[L][0]}`, () => setLetter(it, "N")); const nx = list.querySelector(".to-bucket"); nx && nx.focus(); };
-        acts.append(b); });
-      r.append(check, body, acts); list.append(r);
+      ra.append(el("span", "spacer"));
+      const send = el("button", "btn primary", "Send reply"); send.type = "button";
+      send.onclick = async () => {
+        const text = ta.value.trim(); if (!text) return ta.focus();
+        send.disabled = true; send.textContent = "Sending…";
+        try { await api("/api/reply", { key: it.key, text }); store.set("draft:" + it.key, ""); S.handled[it.key] = Date.now(); const t = taskFor(it.key); if (t) saveTask(t.id, { done: true }, true); closeSheet(); render(); toast("Reply sent"); }
+        catch (e) { toast(e.message); send.disabled = false; send.textContent = "Send reply"; }
+      };
+      ta.onkeydown = (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send.click(); };
+      ra.append(send); sh.append(ra);
     });
-    if (rows.length > S.latestShow) { const more = el("button", "latest-more", `Show ${Math.min(25, rows.length - S.latestShow)} more of ${rows.length - S.latestShow}`); more.type = "button"; more.onclick = () => { S.latestShow += 25; renderPlanner(); }; list.append(more); }
-    if (keep) { const b = [...list.querySelectorAll(".to-bucket")].find((x) => x.dataset.sort === keep); b && b.focus(); }
   }
 
-  function renderSummary(items) {
-    const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
-    const done = Object.values(handled).filter((t) => Number(t) >= +midnight).length + items.filter((i) => i.own && i.done).length;
-    const left = items.filter((i) => !i.done && (i.letter === "A" || i.letter === "B")).length, pct = done + left ? Math.round((done / (done + left)) * 100) : 0;
-    const mins = ((S.plan && S.plan.focus) || []).reduce((n, x) => n + (x.minutes || 0), 0);
-    const prog = el("div", "sum-prog"), top = el("div", "sum-top"), bar = el("div", "sum-bar"), fill = el("span");
-    top.append(el("b", null, left ? `${left} important task${left === 1 ? "" : "s"} left today` : "All important tasks are done"), el("span", null, `${done} done`));
-    fill.style.width = pct + "%"; bar.setAttribute("role", "progressbar"); bar.setAttribute("aria-valuenow", String(pct)); bar.setAttribute("aria-valuemin", "0"); bar.setAttribute("aria-valuemax", "100"); bar.setAttribute("aria-label", "Today's progress"); bar.append(fill); prog.append(top, bar);
-    const stat = (n, l) => { const s = el("div", "sum-stat"); s.append(el("b", null, n), el("span", null, l)); return s; };
-    const unsorted = items.filter((i) => i.letter === "N").length;
-    $("plSummary").replaceChildren(prog, stat(String(unsorted), "unread"), stat(`${mins} min`, "focused today"), stat(`${S.streak} day${S.streak === 1 ? "" : "s"}`, "top-task streak"));
+  function openSync() {
+    openSheet((sh) => {
+      const t = el("h3", null, "Connections"); t.id = "sheetTitle"; sh.append(t);
+      sh.append(el("p", "sub", S.fetchedAt ? `Last updated ${clock(S.fetchedAt)}. Updates every ${S.refreshMinutes} minutes during work hours.` : "Not synced yet."));
+      const box = el("div");
+      (S.sources || []).forEach((s) => { const r = el("div", "srcrow" + (s.state === "err" ? " err" : "")); r.append(el("span", null, s.label), el("span", null, s.state === "err" ? (s.note || "Problem") : s.txt || "OK")); box.append(r); });
+      if (!(S.sources || []).length) box.append(el("p", "sub", "No sources reported yet."));
+      if (S.planError) { const r = el("div", "srcrow err"); r.append(el("span", null, "AI planning"), el("span", null, /credit balance/i.test(S.planError) ? "Out of Anthropic credits" : S.planError.slice(0, 120))); box.append(r); }
+      sh.append(box);
+      const a = el("div", "actions"); a.append(el("span", "spacer"));
+      const b = el("button", "btn primary", "Refresh now"); b.type = "button";
+      b.onclick = async () => { b.disabled = true; b.innerHTML = '<span class="spin">↻</span> Refreshing…'; try { S = await api("/api/refresh", {}); render(); closeSheet(); toast("Up to date"); } catch (e) { toast(e.message); b.disabled = false; b.textContent = "Refresh now"; } };
+      a.append(b); sh.append(a);
+    });
   }
+  $("syncBtn").onclick = openSync;
 
-  // Opens where the task came from: Monday or Slack in a new tab, email in the Inbox here. Your own tasks have no source.
-  function openTaskControl(it) {
-    if (it.own) return null;
-    const where = it.mondayMail || it.source === "monday" ? "Monday" : it.source === "slack" ? "Slack" : "Inbox";
-    if (it.link) { const a = el("a", "btn task-open", "Open task ↗"); a.href = it.link; a.target = "_blank"; a.rel = "noopener"; a.title = `Open in ${where}`; a.setAttribute("aria-label", `Open task in ${where}: ${it.title}`); return a; }
-    const b = el("button", "btn task-open", "Open task"); b.type = "button"; b.title = "Open in the Inbox"; b.setAttribute("aria-label", `Open task in the Inbox: ${it.title}`); b.onclick = () => openInInbox(it.key); return b;
+  /* ---------- toast ---------- */
+  let toastTimer = null, undoFn = null;
+  function toast(text, undo) {
+    $("toastTxt").textContent = text; undoFn = undo || null; $("toastUndo").hidden = !undo;
+    $("toast").classList.add("open"); clearTimeout(toastTimer); toastTimer = setTimeout(() => $("toast").classList.remove("open"), undo ? 6000 : 3000);
   }
+  $("toastUndo").onclick = () => { const f = undoFn; undoFn = null; $("toast").classList.remove("open"); if (f) f(); };
 
-  function taskRow(it, items, frog) {
-    const isFrog = !!frog && frog.key === it.key, open = S.openRow === it.key, r = el("div", "task" + (isFrog ? " isfrog" : "") + (it.done ? " is-done" : ""));
-    const check = el("input", "task-check"); check.type = "checkbox"; check.checked = !!it.done; check.setAttribute("aria-label", `Mark done: ${it.title}`);
-    check.onchange = () => { markTaskDone(it, check.checked); if (check.checked) toast("Marked done", () => markTaskDone(it, false)); };
-    const body = el("div", "task-body"), title = el("span", "tt" + (it.done ? " done" : ""), it.title); body.append(title);
-    const meta = el("div", "task-meta");
-    if (isFrog) meta.append(el("span", "tag top", "🐸 Top task"));
-    const due = dueInfo(it.dueDate); if (due) meta.append(el("span", "tag due " + due.cls, due.text));
-    const wt = waitTag(it); if (wt) meta.append(wt);
-    const from = it.own ? "Your task" + (it.delegateTo ? " · for " + it.delegateTo : "") : [it.letter === "D" && it.delegateTo ? "Hand to " + it.delegateTo : "", it.mondayMail ? `Monday · ${it.from}` : it.source === "email" ? "Email · " + it.from : it.source === "slack" ? "Slack · " + it.from : it.kind === "task" ? `Monday · ${it.status || "Task"}` : "Monday · " + it.from].filter(Boolean).join(" · ");
-    meta.append(el("span", "task-from", from)); body.append(meta);
-    const sel = el("select", "task-move"); sel.setAttribute("aria-label", `Priority for ${it.title}`); LETTERS.forEach((l) => sel.append(new Option(LETTER_INFO[l][0], l, false, l === it.letter)));
-    if (!it.own) sel.append(new Option("Back to Unread", "N"));
-    sel.onchange = () => { const name = sel.value === "N" ? "Unread" : LETTER_INFO[sel.value][0], was = it.letter; setLetter(it, sel.value); toast(`Moved to ${name}`, () => setLetter(it, was)); };
-    const more = el("button", "task-more", "⋯"); more.type = "button"; more.dataset.more = it.key; more.setAttribute("aria-label", `More actions for ${it.title}`); more.setAttribute("aria-expanded", String(open));
-    more.onclick = () => { S.openRow = open ? null : it.key; renderPlanner(); const b = [...document.querySelectorAll(".task-more")].find((x) => x.dataset.more === it.key); b && b.focus(); };
-    const ctl = el("div", "task-ctl"), opener = openTaskControl(it); if (opener) ctl.append(opener); ctl.append(sel);
-    r.append(check, body, ctl, more);
-    if (open) { const p = el("div", "task-panel"), act = (label, fn) => { const b = el("button", "btn", label); b.type = "button"; b.onclick = () => { S.openRow = null; fn(); }; p.append(b); };
-      if (!it.done && !isFrog) act("🐸 Make top task", () => planPatch(S.today, { frog: it.key, frogDone: false }));
-      act("Move up", () => move(it, -1, items)); act("Move down", () => move(it, 1, items));
-      if (!it.own && it.letter === "D") act("Hand off", () => openInInbox(it.key));
-      else act("Delete task", () => { const kept = S.plan.tasks; planPatch(S.today, { tasks: kept.filter((t) => t.id !== it.key) }); toast("Task deleted", () => planPatch(S.today, { tasks: kept })); });
-      r.append(p); }
-    return r;
-  }
-
-  function doneRow(it) {
-    const r = el("div", "task is-done");
-    const check = el("input", "task-check"); check.type = "checkbox"; check.checked = true; check.setAttribute("aria-label", `Not done yet: ${it.title}`);
-    const back = it.letter === "N" ? "Unread" : LETTER_INFO[it.letter] ? LETTER_INFO[it.letter][0] : "your list";
-    check.onchange = () => { markTaskDone(it, false); toast(`Moved back to ${back}`, () => markTaskDone(it, true)); };
-    const body = el("div", "task-body"); body.append(el("span", "tt done", it.title));
-    const meta = el("div", "task-meta");
-    const src = it.own ? "Your task" : it.mondayMail ? `Monday · ${it.from}` : it.source === "email" ? "Email · " + it.from : it.source === "slack" ? "Slack · " + it.from : it.kind === "task" ? `Monday · ${it.status || "Task"}` : "Monday · " + it.from;
-    meta.append(el("span", "task-from", src));
-    if (it.doneAt) { const d = new Date(it.doneAt), today = new Date().toDateString() === d.toDateString();
-      meta.append(el("span", null, "Done " + (today ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })))); }
-    body.append(meta);
-    const ctl = el("div", "task-ctl"), opener = openTaskControl(it); if (opener) ctl.append(opener);
-    r.append(check, body, ctl);
-    return r;
-  }
-
-  function renderTomorrow(items) {
-    if (document.activeElement && ["planNotes", "tmFrog"].includes(document.activeElement.id)) return; // don't wipe what's being typed
-    const box = $("tmrw"); box.replaceChildren();
-    const left = el("div", "card"), right = el("div", "card");
-    left.append(el("span", "k", `Tomorrow · ${S.tomorrow ? new Date(S.tomorrow + "T12:00").toLocaleDateString([], { weekday: "long", day: "numeric", month: "short" }) : ""}`));
-    const tt = (S.planT && S.planT.tasks) || [];
-    const carry = items.filter((i) => !i.done && (i.letter === "A" || i.letter === "B") && i.own && !tt.some((t) => t.text === i.title));
-    const cb = el("button", "btn", carry.length ? `Move ${carry.length} unfinished task${carry.length === 1 ? "" : "s"} to tomorrow` : "No unfinished tasks to move");
-    cb.type = "button"; cb.disabled = !carry.length;
-    cb.onclick = () => planPatch(S.tomorrow, { tasks: [...tt, ...carry.map((c, i) => ({ id: "p:" + (Date.now() + i).toString(36), text: c.title, abc: c.letter, done: false }))] });
-    left.append(cb);
-    const form = el("form", "add"); const inp = el("input"); inp.id = "tmFrog"; inp.placeholder = "Tomorrow's top task"; inp.setAttribute("aria-label", "Tomorrow's top task");
-    const ab = el("button", "btn primary", "Set top task"); ab.type = "submit"; form.append(inp, ab);
-    form.onsubmit = (e) => { e.preventDefault(); const text = inp.value.trim(); if (!text) return; const id = "p:" + Date.now().toString(36);
-      planPatch(S.tomorrow, { tasks: [{ id, text, abc: "A", done: false }, ...tt], frog: id }); toast("Tomorrow's top task is set"); };
-    left.append(form);
-    const ul = el("ul");
-    tt.forEach((t) => { const li = el("li"); li.append(el("span", "L " + t.abc, t.abc), el("span", null, (S.planT.frog === t.id ? "🐸 " : "") + t.text));
-      const x = el("button", "btn ghost", "Remove"); x.type = "button"; x.onclick = () => planPatch(S.tomorrow, { tasks: tt.filter((y) => y.id !== t.id), frog: S.planT.frog === t.id ? null : S.planT.frog }); li.append(x); ul.append(li); });
-    if (!tt.length) ul.append(el("li", null, "Nothing planned for tomorrow yet."));
-    left.append(ul);
-    right.append(el("span", "k", "Tonight's notes"));
-    const ta = el("textarea"); ta.id = "planNotes"; ta.placeholder = "What got done, what's blocked, and what tomorrow depends on…"; ta.value = (S.plan && S.plan.notes) || "";
-    ta.oninput = () => { clearTimeout(ta._t); ta._t = setTimeout(() => planPatch(S.today, { notes: ta.value }), 800); };
-    right.append(ta);
-    box.append(left, right);
-  }
-
-  /* focus timer (single-handle the task); remembered in this browser */
-  function focusState() { try { return JSON.parse(localStorage.getItem("cd:focus") || "null"); } catch { return null; } }
-  function startFocus(it, minutes) {
-    const f = { key: it.key, title: it.title, start: Date.now(), minutes };
-    try { localStorage.setItem("cd:focus", JSON.stringify(f)); } catch {}
-    toast(`Focus started: ${minutes} minutes on one task`); renderTimer();
-  }
-  function stopFocus(completed) {
-    const f = focusState(); try { localStorage.removeItem("cd:focus"); } catch {}
-    if (f && S.plan) { const mins = Math.round((Date.now() - f.start) / 60000); if (mins >= 1) planPatch(S.today, { focus: [...(S.plan.focus || []), { key: f.key, start: f.start, minutes: Math.min(mins, f.minutes) }] }); }
-    if (completed) toast("Focus block done. Take a short break.");
-    renderTimer();
-  }
-  function renderTimer() {
-    const box = $("timer"); if (!box || S.view !== "planner") return;
-    const f = focusState(); box.replaceChildren(el("span", "k", "Focus timer"));
-    const mins = ((S.plan && S.plan.focus) || []).reduce((n, x) => n + (x.minutes || 0), 0);
-    if (f) {
-      const left = f.start + f.minutes * 60000 - Date.now();
-      if (left <= 0) { stopFocus(true); return; }
-      const m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000);
-      box.append(el("span", "clock", `${m}:${String(sec).padStart(2, "0")}`), el("span", "what", f.title));
-      const r = el("div", "row2"); const stop = el("button", "btn", "Stop"); stop.type = "button"; stop.onclick = () => stopFocus(false); r.append(stop); box.append(r);
-    } else {
-      box.append(el("span", null, "Pick a length and work on your top task only."));
-      const r = el("div", "row2");
-      [25, 60, 90].forEach((n) => { const b = el("button", "btn", `${n} min`); b.type = "button";
-        b.onclick = () => { const items = planItems(); const fr = frogOf(items); const target = fr && !S.plan.frogDone ? fr : items.find((i) => i.letter === "A" && !i.done) || fr; if (target) startFocus(target, n); else toast("Add a task first"); }; r.append(b); });
-      box.append(r);
-    }
-  }
-  setInterval(() => { if (S.view === "planner" && focusState()) renderTimer(); }, 1000);
-
-  /* ---------- server API ---------- */
-  async function api(path, body) {
-    const r = await fetch(path, body === undefined ? { headers: { Accept: "application/json" } } : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (r.status === 401) { location.href = "/login"; throw { code: "signed_out", message: "Signed out" }; }
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw { code: "server", message: j.error || `Server error ${r.status}`, data: j };
-    return j;
-  }
-  function applyState(st) {
-    S.serverSources = st.sources || [];
-    S.accounts = st.accounts || [];
-    S.mail = Object.fromEntries(Object.entries(st.mail || {}).map(([k, v]) => [k, v.map(tagMondayMail)]));
-    S.slack = st.slack || [];
-    S.mon.tasks = { all: (st.mon && st.mon.tasks) || [] }; S.mon.updates = { all: (st.mon && st.mon.updates) || [] }; S.mon.boards = (st.mon && st.mon.boards) || [];
-    S.mailAt = S.slackAt = S.mon.at = st.fetchedAt || 0;
-    S.triage = st.triage || null; S.triageAt = st.triageAt || 0;
-    S.planning = !!st.planning; S.refreshMin = st.refreshMinutes || 60;
-    S.today = st.today || ""; S.tomorrow = st.tomorrow || ""; S.streak = st.frogStreak || 0;
-    if (st.planner) { S.plan = st.planner.today; S.planT = st.planner.tomorrow; }
-    S.buckets = st.buckets || {};
-    handled = st.handled || {}; ticks = st.ticks || {}; store.set("handled", handled); store.set("ticks", ticks);
-    S.loading = !st.fetchedAt;
-    if (st.planError) { $("pageBanner").textContent = "Claude couldn't build the plan last time: " + st.planError; $("pageBanner").hidden = false; } else $("pageBanner").hidden = true;
-    S.sample = st.claude ? true : null; $("retriage").hidden = !st.claude;
-    render();
-    if (!st.fetchedAt || st.refreshing || st.planning) { clearTimeout(load._t); load._t = setTimeout(load, 5000); }
-  }
-  async function load() {
-    try { applyState(await api("/api/state")); }
-    catch (e) { if (e.code !== "signed_out") { $("pageBanner").textContent = "Couldn't reach the server. It will try again in a minute."; $("pageBanner").hidden = false; } }
-  }
-
-  async function runTriage() {
-    if (!S.sample || S.planning) return;
-    S.planning = true; const btn = $("retriage"); btn.disabled = true; btn.querySelector("span").textContent = "Planning…"; renderHeader(); renderDetail();
-    try { applyState(await api("/api/replan", {})); toast("Day re-planned"); }
-    catch (e) { if (e.data && e.data.fetchedAt) applyState(e.data); $("pageBanner").textContent = e.message; $("pageBanner").hidden = false; }
-    finally { S.planning = false; btn.disabled = false; btn.querySelector("span").textContent = "Re-plan my day"; render(); }
-  }
-
-  async function draft(it) {
-    const st = $("dStatus"), btn = $("dDraft");
-    st.className = "status"; st.textContent = "Claude is writing…"; btn.disabled = true;
-    try {
-      const { text } = await api("/api/draft", { key: it.key, instruction: ($("dAsk") && $("dAsk").value.trim()) || "" });
-      if (S.selected === it.key) { $("dText").value = text; $("dStatus").textContent = "Draft ready. Edit it, then send."; $("dText").focus(); }
-    } catch (e) { if (S.selected === it.key && $("dStatus")) { $("dStatus").className = "status err"; $("dStatus").textContent = e.message; } }
-    finally { if ($("dDraft")) $("dDraft").disabled = false; }
-  }
-
-  function askSend(it) {
-    const text = $("dText").value.trim();
-    if (!text) { $("dStatus").className = "status err"; $("dStatus").textContent = "Write a reply first."; $("dText").focus(); return; }
-    if (S.confirmFor === it.key) { $("dYes") && $("dYes").focus(); return; }
-    S.confirmFor = it.key; $("detail").querySelector(".composer").append(confirmBox(it, true));
-  }
-
-  async function send(it) {
-    const text = $("dText").value.trim(); if (!text || S.sending) return;
-    S.sending = true; $("dYes").disabled = true; const st = $("dStatus"); st.className = "status"; st.textContent = "Sending…";
-    try {
-      await api("/api/reply", { key: it.key, text });
-      S.confirmFor = null; $("dText").value = ""; if ($("dAsk")) $("dAsk").value = "";
-      S.sending = false; toggleDone(it);
-      toast(it.source === "email" ? "Email sent · marked handled" : it.source === "monday" ? "Posted to Monday · marked handled" : "Sent to Slack · marked handled");
-    } catch (e) {
-      if ($("dStatus")) { $("dStatus").className = "status err"; $("dStatus").textContent = e.message; }
-      if ($("dYes")) $("dYes").disabled = false;
-    } finally { S.sending = false; }
-  }
-
-  async function boot() { S.mcp = true; render(); await load(); setInterval(load, 5 * 60000); }
-
-  /* ---------- wiring ---------- */
-  document.querySelectorAll(".tile").forEach((b) => b.onclick = () => { S.tile = S.tile === b.dataset.tile ? null : b.dataset.tile; S.selected = null; render(); });
-  document.querySelectorAll(".seg button").forEach((b) => b.onclick = () => { S.src = b.dataset.src; S.conn = null; S.scope = null; document.querySelectorAll(".seg button").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); S.selected = null; render(); });
-  $("q").oninput = (e) => { S.q = e.target.value; S.selected = null; renderList(); renderDetail(); };
-  $("showDone").onchange = (e) => { S.showDone = e.target.checked; render(); };
-  $("showMuted").onchange = (e) => { S.showMuted = e.target.checked; S.selected = null; render(); };
-  $("scopeFilter").onchange = (e) => { S.scope = e.target.value || null; S.selected = null; e.target.blur(); render(); };
-  $("refresh").onclick = async () => {
-    const b = $("refresh"); b.disabled = true; $("pulse").className = "pulse busy"; $("syncTxt").textContent = "Refreshing…";
-    try { applyState(await api("/api/refresh", {})); toast("Up to date"); } catch (e) { toast(e.message); }
-    finally { b.disabled = false; clearTimeout(load._t); load._t = setTimeout(load, 20000); }
-  };
-  $("retriage").onclick = () => runTriage();
-  document.querySelectorAll(".views button").forEach((b) => b.onclick = () => setView(b.dataset.view));
-  window.addEventListener("hashchange", () => setView(location.hash === "#planner" ? "planner" : "inbox", true));
-  const conn = $("conn"), connT = $("connToggle");
-  const setConn = (open) => { conn.classList.toggle("open", open); connT.setAttribute("aria-expanded", String(open)); };
-  connT.onclick = (e) => { e.stopPropagation(); setConn(!conn.classList.contains("open")); };
-  document.addEventListener("click", (e) => { if (!conn.contains(e.target)) setConn(false); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && conn.classList.contains("open")) { setConn(false); connT.focus(); } });
-  const jumps = [...document.querySelectorAll(".pl-nav button")];
-  const markJump = (id) => jumps.forEach((b) => (b.dataset.jump === id ? b.setAttribute("aria-current", "true") : b.removeAttribute("aria-current")));
-  jumps.forEach((b) => b.onclick = () => { markJump(b.dataset.jump); $(b.dataset.jump).scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); });
-  if ("IntersectionObserver" in window) { const io = new IntersectionObserver((es) => es.forEach((x) => x.isIntersecting && markJump(x.target.id)), { rootMargin: "-25% 0px -65% 0px" }); jumps.forEach((b) => io.observe($(b.dataset.jump))); }
-  $("addTask").onsubmit = (e) => {
-    e.preventDefault(); const text = $("newTask").value.trim(); if (!text || !S.plan) return;
-    const tasks = [...(S.plan.tasks || []), { id: "p:" + Date.now().toString(36), text, abc: $("newAbc").value, done: false, due: $("newDue").value }];
-    S.planTab = $("newAbc").value; planPatch(S.today, { tasks }); $("newTask").value = ""; $("newDue").value = ""; toast(`Added to ${LETTER_INFO[S.planTab][0]}`);
-  };
-  if (location.hash === "#planner") setView("planner", true);
-  const moveSel = (dir) => { const order = navOrder(); if (!order.length) return; const idx = order.findIndex((i) => i.key === S.selected);
-    const n = order[Math.max(0, Math.min(order.length - 1, idx < 0 ? 0 : idx + dir))]; select(n.key);
-    const r = document.querySelector(`.row[data-key="${CSS.escape(n.key)}"]`); r && r.scrollIntoView({ block: "nearest" }); };
+  /* ---------- keys ---------- */
   document.addEventListener("keydown", (e) => {
-    const tag = (e.target.tagName || "").toLowerCase();
-    if (S.view === "planner" && tag !== "input" && tag !== "textarea" && tag !== "select") return;
-    if (tag === "input" || tag === "textarea") { if (e.key === "Escape") e.target.blur(); return; }
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); moveSel(1); }
-    else if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); moveSel(-1); }
-    else if (e.key === "r" && $("dText")) { e.preventDefault(); $("dText").focus(); }
-    else if (e.key === "e") { const it = ITEMS.find((i) => i.key === S.selected); if (it) { e.preventDefault(); toggleDone(it); } }
-    else if (e.key === "/") { e.preventDefault(); $("q").focus(); }
-    else if (e.key === "Escape" && $("split").classList.contains("show-detail")) $("split").classList.remove("show-detail");
+    if (e.key === "Escape" && $("sheet").classList.contains("open")) { closeSheet(); return; }
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || $("sheet").classList.contains("open");
+    if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === "n" || e.key === "/") { e.preventDefault(); $("addText").focus(); }
+    else if (["1", "2", "3", "4"].includes(e.key)) setTab(["today", "inbox", "upcoming", "done"][Number(e.key) - 1]);
   });
-  setInterval(renderHeader, 30000);
 
-  /* ---------- The little Buddha guide ----------
-     He walks along the bottom of every page. Every 40 seconds he strolls somewhere new, bows and shares a
-     thought about focus, consistency or mindset; a tap makes him hop and offer another. He greets you once per
-     visit, can be put away, and this browser remembers that. With reduced motion he stays put. */
-  // Tips are the desk's own words. Quotes carry the name they're known by; where the source is uncertain, it says so.
-  const THOUGHTS = [
-    { text: "Do the top task before you open email or Slack. The inbox will still be there in an hour." },
-    { text: "One task on the screen. Everything else can wait 25 minutes." },
-    { text: "A distracting thought is not an instruction. Write it down and go back to the task." },
-    { text: "Check messages at set times, not every time something pings." },
-    { text: "Close the tabs this task doesn't need. Every open tab is a small knock on the door." },
-    { text: "When you feel stuck, make the next step smaller, then take it." },
-    { text: "Spend your sharpest hours on your hardest task. Save the easy ones for when you're tired." },
-    { text: "Consistency beats intensity. A steady day, repeated, beats a heroic one you can't repeat." },
-    { text: "You don't have to feel ready. Start for five minutes and let momentum do the rest." },
-    { text: "Busy is not the same as useful. Ask what this task moves forward." },
-    { text: "Finish one thing before starting the next. Half-done work weighs on the mind." },
-    { text: "A short walk, a glass of water and three slow breaths fix more than you'd think." },
-    { text: "Plan tomorrow tonight. A morning that starts with a decision already made starts faster." },
-    { text: "Saying no to a small request is saying yes to the work that matters." },
-    { text: "Judge the day by whether you did what you planned, not by how busy you felt." },
-    { text: "Mind is the forerunner of all actions.", by: "Dhammapada, verse 1" },
-    { text: "Drop by drop is the water pot filled.", by: "Dhammapada, verse 122" },
-    { text: "We are what we repeatedly do. Excellence, then, is not an act, but a habit.", by: "Will Durant, summarizing Aristotle" },
-    { text: "Success is the sum of small efforts, repeated day in and day out.", by: "Robert Collier" },
-    { text: "Small disciplines repeated with consistency every day lead to great achievements gained slowly over time.", by: "John C. Maxwell" },
-    { text: "You can do anything, but not everything.", by: "David Allen" },
-    { text: "The key is not to prioritize what's on your schedule, but to schedule your priorities.", by: "Stephen R. Covey" },
-    { text: "Until we can manage time, we can manage nothing else.", by: "Peter Drucker" },
-    { text: "Simplicity boils down to two steps: Identify the essential. Eliminate the rest.", by: "Leo Babauta" },
-    { text: "Almost everything will work again if you unplug it for a few minutes, including you.", by: "Anne Lamott" },
-    { text: "It is not enough to be busy. So are the ants. The question is: What are we busy about?", by: "Henry David Thoreau" },
-    { text: "The secret of getting ahead is getting started.", by: "Often attributed to Mark Twain" },
-    { text: "If you chase two rabbits, you will not catch either one.", by: "Proverb" }
-  ];
-
-  function startGuide() {
-    const HIDE = "cd:buddha", HELLO = "cd:buddha-hello", SRC = "mascot/buddha"; // served by the app (see src/index.js)
-    const read = (store, k) => { try { return store.getItem(k); } catch { return null; } };
-    const write = (store, k, v) => { try { store.setItem(k, v); } catch { /* not remembered */ } };
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const floor = el("div", "mascot"), stage = el("div", "m-stage"), shadow = el("div", "m-shadow"), body = el("div", "m-body"), img = el("img");
-    floor.setAttribute("role", "complementary"); floor.setAttribute("aria-label", "A little Buddha guide");
-    img.src = SRC; img.alt = ""; img.draggable = false;
-    img.onerror = () => { img.remove(); body.append(el("span", "m-flat", "🙏")); };
-    body.append(img); stage.append(shadow, body);
-    const hit = el("button", "m-hit"); hit.type = "button"; hit.setAttribute("aria-label", "A little Buddha guide. Tap for another thought.");
-    const bubble = el("div", "m-bubble"); bubble.setAttribute("role", "status"); bubble.setAttribute("aria-live", "polite"); bubble.hidden = true;
-    floor.append(stage, hit, bubble);
-    const back = el("button", "m-show"); back.type = "button"; back.setAttribute("aria-label", "Bring back the guide"); back.title = "Bring back the guide";
-    const backImg = el("img"); backImg.src = SRC; backImg.alt = ""; back.append(backImg);
-    document.body.append(floor, back);
-
-    let k = -1, x = 0, target = 0, mode = "idle", facing = 1, phase = 0, since = 0, presented = false, pointer = null, frame = 0, timer = 0, last = 0;
-    let hello = read(sessionStorage, HELLO) !== "done";
-    const height = () => (innerWidth < 640 ? 112 : 150);
-    const width = () => floor.clientWidth || innerWidth;
-    const margin = () => Math.max(60, height() * 0.45);
-    const spot = (f) => margin() + f * Math.max(0, width() - 2 * margin());
-    const pick = () => { let n = Math.floor(Math.random() * THOUGHTS.length); if (n === k) n = (n + 1) % THOUGHTS.length; k = n; };
-    const busyReading = () => bubble.matches(":hover") || bubble.contains(document.activeElement);
-    const sayHello = () => { if (hello) { hello = false; write(sessionStorage, HELLO, "done"); } };
-
-    function size() {
-      const h = height();
-      body.style.height = h + "px"; body.style.width = h * 0.64 + "px";
-      shadow.style.width = h * 0.5 + "px"; shadow.style.height = h * 0.07 + "px";
-    }
-    function fill() {
-      bubble.replaceChildren();
-      if (hello) { const h = new Date().getHours(); bubble.append(el("p", "m-hi", `${h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"}, Mark! 🙏`)); }
-      const t = THOUGHTS[k], q = el("blockquote");
-      q.append(el("p", null, `“${t.text}”`)); if (t.by) q.append(el("footer", null, "— " + t.by));
-      const row = el("div", "m-actions");
-      const add = (cls, label, fn) => { const b = el("button", cls, label); b.type = "button"; b.onclick = fn; row.append(b); };
-      add("btn", "Another", () => act("walk"));
-      add("m-link", "Close", () => { sayHello(); bubble.hidden = true; hit.focus(); });
-      add("m-link", "Put him away", () => setHidden(true));
-      bubble.append(q, row);
-    }
-    function present() { fill(); bubble.hidden = false; bubble.classList.remove("pop"); void bubble.offsetWidth; bubble.classList.add("pop"); place(); }
-    function place() {
-      hit.style.left = x - hit.offsetWidth / 2 + "px";
-      if (bubble.hidden) return;
-      const left = Math.min(Math.max(8, x - 48), width() - bubble.offsetWidth - 8);
-      bubble.style.left = left + "px"; bubble.style.setProperty("--tail", `${Math.max(18, Math.min(bubble.offsetWidth - 18, x - left))}px`);
-    }
-    // kind: "walk" goes somewhere new first, "hop" jumps where he stands.
-    function act(kind) {
-      if (kind !== "auto") sayHello();
-      pick(); bubble.hidden = true; presented = false; since = 0;
-      if (still) mode = "bow";
-      else if (kind === "hop") mode = "hop";
-      else {
-        let n = spot(0.05 + Math.random() * 0.9);
-        if (Math.abs(n - x) < width() * 0.2) n = spot(x > width() / 2 ? 0.05 + Math.random() * 0.3 : 0.65 + Math.random() * 0.3);
-        target = n; mode = "walk";
-      }
-      clearInterval(timer); timer = setInterval(() => { if (!document.hidden && !busyReading()) act("auto"); }, 40000);
-    }
-    function pose(since, phase) {
-      if (mode === "walk") return { lift: Math.abs(Math.sin(phase)) * 6, tilt: Math.sin(phase) * 3, squash: 1 - Math.abs(Math.cos(phase)) * 0.02 };
-      if (mode === "hop") { const p = Math.min(1, since / 0.55); return { lift: Math.sin(p * Math.PI) * 38, tilt: 0, squash: p > 0.85 ? 0.94 : 1.03 }; }
-      if (mode === "bow") return { lift: 0, tilt: still ? 0 : Math.sin(Math.min(1, since / 0.9) * Math.PI) * 9, squash: 1 };
-      return { lift: 0, tilt: 0, squash: 1 };
-    }
-    function tick(now) {
-      frame = requestAnimationFrame(tick);
-      const dt = Math.min((now - last) / 1000, 0.05); last = now; since += dt;
-      if (mode === "walk") {
-        const dir = Math.sign(target - x) || 1; facing = dir;
-        x += dir * Math.min(Math.abs(target - x), dt * Math.max(120, width() * 0.11)); phase += dt * 10;
-        if (Math.abs(target - x) < 0.5) { mode = "settle"; since = 0; }
-      } else if (mode === "settle" && since > 0.2) { mode = "bow"; since = 0; }
-      else if (mode === "hop" && since > 0.55) { mode = "bow"; since = 0; }
-      else if (mode === "bow") {
-        if (!presented) { presented = true; present(); }
-        if (since > 0.9) { mode = "idle"; since = 0; }
-      }
-      if (mode === "idle" || mode === "settle") { const toward = pointer ?? width() / 2; if (Math.abs(toward - x) > 30) facing = toward > x ? 1 : -1; }
-      const p = pose(since, phase), h = height();
-      const breathe = mode === "idle" && !still ? 1 + Math.sin(now / 450) * 0.012 : 1, sway = mode === "idle" && !still ? Math.sin(now / 1300) * 1.2 : 0;
-      body.style.transform = `translate3d(${x - h * 0.32}px, ${-p.lift}px, 0)`;
-      const fig = body.firstElementChild; if (fig) fig.style.transform = `scaleX(${facing}) rotate(${p.tilt + sway}deg) scaleY(${p.squash * breathe})`;
-      shadow.style.transform = `translate3d(${x - h * 0.25}px, 0, 0) scale(${1 - p.lift / 90})`;
-      shadow.style.opacity = String(Math.max(0.25, 1 - p.lift / 50));
-      place();
-    }
-    function start() {
-      size(); pick();
-      x = still ? spot(0.08) : -height(); target = spot(0.08); mode = still ? "bow" : "walk"; since = 0; presented = false;
-      last = performance.now(); cancelAnimationFrame(frame); frame = requestAnimationFrame(tick);
-      clearInterval(timer); timer = setInterval(() => { if (!document.hidden && !busyReading()) act("auto"); }, 40000);
-    }
-    function stop() { cancelAnimationFrame(frame); clearInterval(timer); bubble.hidden = true; }
-    function setHidden(v) {
-      write(localStorage, HIDE, v ? "hidden" : "shown");
-      floor.hidden = v; back.hidden = !v;
-      if (v) { stop(); back.focus(); } else { start(); hit.focus(); }
-    }
-
-    hit.onclick = () => act("hop");
-    back.onclick = () => setHidden(false);
-    addEventListener("pointermove", (e) => { const r = floor.getBoundingClientRect(); pointer = e.clientY > r.top - 200 ? e.clientX - r.left : null; }, { passive: true });
-    addEventListener("resize", () => { size(); target = Math.min(target, spot(1)); x = Math.min(x, spot(1)); });
-    const hidden = read(localStorage, HIDE) === "hidden";
-    floor.hidden = hidden; back.hidden = !hidden;
-    if (!hidden) start();
+  /* ---------- load ---------- */
+  async function load() {
+    try { S = await api("/api/state"); S.handled ||= {}; S._loadedAt = Date.now(); render(); }
+    catch (e) { if (!S) $("view").innerHTML = ""; if (!S) $("view").append(empty("Couldn't load: " + e.message)); }
   }
-
-  startGuide();
-  boot();
+  if (!["today", "inbox", "upcoming", "done"].includes(tab)) tab = "today";
+  $("addDay").value = tab === "upcoming" ? "tomorrow" : "today";
+  load();
+  setInterval(() => { if (!document.hidden && !$("sheet").classList.contains("open")) load(); }, 5 * 60e3);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && S && Date.now() - (S._loadedAt || 0) > 60e3 && !$("sheet").classList.contains("open")) load(); });
 })();
 </script>
-</body></html>
+</body>
+</html>

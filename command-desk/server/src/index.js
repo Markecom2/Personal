@@ -123,7 +123,8 @@ async function replan() {
       .filter((i) => !handled[i.key] && !i.promo && !(i.kind === "task" && /de-prioriti/i.test(i.status)))
       .sort((a, b) => b.time - a.time).slice(0, 90);
     if (!items.length) return;
-    const ownTasks = store.planDoc(dateIn(TZ)).tasks || [];
+    const today = dateIn(TZ);
+    const ownTasks = store.tasks().filter((t) => !t.done && t.day && t.day <= today).map((t) => ({ id: t.id, text: t.text, abc: t.top ? "A" : "B", done: false }));
     try { store.setTriage(await claude.triage(items, TZ, ownTasks)); live.planError = null; }
     catch (e) { live.planError = e.message; console.error("[Claude]", e.message); }
   })().finally(() => { live.planning = null; });
@@ -172,7 +173,7 @@ function snapshot() {
     triage: st.triage, triageAt: st.triageAt, handled: st.handled, ticks: st.ticks, buckets: st.buckets || {},
     today: dateIn(TZ), tomorrow: dateIn(TZ, 1),
     planner: { today: store.planDoc(dateIn(TZ)), tomorrow: store.planDoc(dateIn(TZ, 1)) },
-    frogStreak: store.frogStreak(dateIn(TZ))
+    frogStreak: store.frogStreak(dateIn(TZ)), tasks: store.tasks(), user: process.env.DASH_USER || ""
   };
 }
 const findItem = (key) => allItems().find((i) => i.key === key);
@@ -191,6 +192,24 @@ app.post("/api/bucket", (req, res) => {
   if (!key) return res.status(400).json({ error: "key_required" });
   store.setBucket(key, ["A", "B", "C", "D", "E"].includes(req.body.letter) ? req.body.letter : null);
   res.json({ ok: true });
+});
+// Your own tasks: create (no id, or a new p:id), change, or remove one.
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+app.post("/api/task", (req, res) => {
+  const b = req.body || {}, id = /^p:[\w-]{1,40}$/.test(b.id) ? b.id : null;
+  if (b.remove) { if (id) store.removeTask(id); return res.json({ tasks: store.tasks() }); }
+  const patch = {};
+  if ("text" in b) patch.text = String(b.text || "").replace(/\s+/g, " ").trim().slice(0, 300);
+  if ("day" in b) patch.day = DAY.test(b.day) ? b.day : "";
+  if ("top" in b) patch.top = !!b.top;
+  if ("done" in b) patch.done = !!b.done;
+  if ("ref" in b) patch.ref = String(b.ref || "").slice(0, 120);
+  if ("note" in b) patch.note = String(b.note || "").slice(0, 2000);
+  const t = store.saveTask(id, patch);
+  if (!t) return res.status(400).json({ error: "Write the task first." });
+  // Finishing a task that came from a message also clears that message from the inbox.
+  if ("done" in patch && t.ref) store.setHandled(t.ref, t.done);
+  res.json({ task: t, tasks: store.tasks() });
 });
 app.post("/api/ticks", (req, res) => {
   const steps = Array.isArray(req.body.steps) ? req.body.steps.map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n < 10) : [];

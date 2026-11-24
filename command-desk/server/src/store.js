@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const FILE = path.resolve(process.env.DATA_DIR || "./data", "state.json");
-let state = { handled: {}, ticks: {}, triage: null, triageAt: 0, planner: {}, buckets: {} };
+let state = { handled: {}, ticks: {}, triage: null, triageAt: 0, planner: {}, buckets: {}, tasks: null };
 
 try { state = { ...state, ...JSON.parse(fs.readFileSync(FILE, "utf8")) }; } catch { /* first run */ }
 
@@ -46,6 +46,39 @@ export const store = {
     if (changed) save();
     return changed;
   },
+  // Your own to-do list. day is "YYYY-MM-DD" (shown on that day and every day after until done) or "" for someday.
+  // ref is the email, Slack message or Monday item a task came from.
+  tasks() {
+    if (!Array.isArray(state.tasks)) {
+      // First run: bring over tasks from the old per-day planner (unfinished ones, and the last week's finished ones).
+      const cut = Date.now() - 7 * 864e5, seen = new Set(), out = [];
+      for (const [day, doc] of Object.entries(state.planner || {}).sort().reverse()) for (const t of doc.tasks || []) {
+        if (seen.has(t.id) || (t.done && !(t.doneAt > cut))) continue;
+        seen.add(t.id);
+        out.push({ id: t.id, text: t.text, day, top: t.abc === "A", done: !!t.done, doneAt: t.doneAt || 0, ref: "", note: "", createdAt: t.doneAt || Date.now() });
+      }
+      state.tasks = out; save();
+    }
+    return state.tasks;
+  },
+  saveTask(id, patch) {
+    const list = this.tasks();
+    let t = id && list.find((x) => x.id === id);
+    if (!t) {
+      if (!patch.text) return null;
+      t = { id: id || "p:" + Math.random().toString(36).slice(2, 10), text: "", day: "", top: false, done: false, doneAt: 0, ref: "", note: "", createdAt: Date.now() };
+      list.push(t);
+    }
+    if ("done" in patch && patch.done !== t.done) t.doneAt = patch.done ? Date.now() : 0;
+    Object.assign(t, patch);
+    if (!t.text) t.text = "(untitled)";
+    // Keep finished tasks for 30 days and the list under 500.
+    const cut = Date.now() - 30 * 864e5;
+    state.tasks = list.filter((x) => !(x.done && x.doneAt < cut)).slice(-500);
+    save();
+    return t;
+  },
+  removeTask(id) { state.tasks = this.tasks().filter((x) => x.id !== id); save(); },
   setTicks(key, steps) { if (steps.length) state.ticks[key] = steps; else delete state.ticks[key]; save(); },
   setTriage(t) { state.triage = t; state.triageAt = Date.now(); save(); },
   // Daily planner (Eat That Frog): one doc per date "YYYY-MM-DD".
